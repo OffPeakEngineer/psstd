@@ -7,6 +7,7 @@ import (
 	"html/template"
 	"math"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 
@@ -102,8 +103,12 @@ func renderANSI(s NodeStats) string {
 	sb.WriteString(fmt.Sprintf("      %s / %s\n", fmtBytes(s.MemUsed), fmtBytes(s.MemTotal)))
 
 	loadStyle := styleGreen
-	if s.Load[0] > 2.0 { loadStyle = styleYellow }
-	if s.Load[0] > 4.0 { loadStyle = styleRed }
+	if s.Load[0] > 2.0 {
+		loadStyle = styleYellow
+	}
+	if s.Load[0] > 4.0 {
+		loadStyle = styleRed
+	}
 	sb.WriteString(fmt.Sprintf("Load  %s  %.2f  %.2f  %.2f\n",
 		loadStyle.Render("▶"), s.Load[0], s.Load[1], s.Load[2]))
 
@@ -131,29 +136,105 @@ type layoutParams struct {
 }
 
 func computeLayout(nodeCount, winW, winH int) layoutParams {
-	if nodeCount == 0 { nodeCount = 1 }
+	if nodeCount == 0 {
+		nodeCount = 1
+	}
 	aspect := 16.0 / 9.0
 	if winW > 0 && winH > 0 {
 		aspect = float64(winW) / float64(winH)
 	}
 	cols := int(math.Round(math.Sqrt(float64(nodeCount) * aspect)))
-	if cols < 1 { cols = 1 }
-	if cols > nodeCount { cols = nodeCount }
+	if cols < 1 {
+		cols = 1
+	}
+	if cols > nodeCount {
+		cols = nodeCount
+	}
 	cw := 100.0 / float64(cols)
 	return layoutParams{CellWidth: cw, FontSize: cw * 0.016}
+}
+func avgCPU(s NodeStats) float64 {
+	if len(s.CPU) == 0 {
+		return 0
+	}
+	var sum float64
+	for _, v := range s.CPU {
+		sum += v
+	}
+	return sum / float64(len(s.CPU))
+}
+
+func nodeOnline(s NodeStats) bool {
+	return s.UpdatedAt != 0 && time.Since(time.Unix(0, s.UpdatedAt)) <= 15*time.Second
+}
+
+func computeRefreshIntervalMs(nodes []NodeStats) int {
+	if len(nodes) == 0 {
+		return 3000
+	}
+	maxCPU := 0.0
+	maxLoad := 0.0
+	for _, s := range nodes {
+		if !nodeOnline(s) {
+			continue
+		}
+		if cpu := avgCPU(s); cpu > maxCPU {
+			maxCPU = cpu
+		}
+		if s.Load[0] > maxLoad {
+			maxLoad = s.Load[0]
+		}
+	}
+
+	switch {
+	case maxCPU < 30 && maxLoad < 1.0:
+		return 2000
+	case maxCPU < 55 && maxLoad < 2.0:
+		return 3500
+	case maxCPU < 80 && maxLoad < 4.0:
+		return 6500
+	default:
+		return 11000
+	}
+}
+
+func findBestNodeHint(nodes []NodeStats) string {
+	best := ""
+	bestScore := math.MaxFloat64
+	for _, s := range nodes {
+		if !nodeOnline(s) {
+			continue
+		}
+		score := avgCPU(s) + s.Load[0]*10
+		if score < bestScore {
+			bestScore = score
+			best = fmt.Sprintf("%s (%.0f%% cpu, %.2f load)", s.Name, avgCPU(s), s.Load[0])
+		}
+	}
+	if best == "" {
+		return "no responsive peers yet"
+	}
+	return "lowest-load node: " + best
 }
 
 // ── HTTP handler ──────────────────────────────────────────────────────────────
 
 type cellData struct {
 	Name    string
+	URL     string
 	HTML    template.HTML
 	Offline bool
+	Focused bool
 }
 
 type pageData struct {
-	Layout layoutParams
-	Nodes  []cellData
+	Layout        layoutParams
+	Nodes         []cellData
+	RefreshMs     int
+	RefreshLabel  string
+	BestHint      string
+	Focus         string
+	ClearFocusURL string
 }
 
 func makeHandler(db *pebble.DB) http.HandlerFunc {
@@ -168,20 +249,70 @@ func makeHandler(db *pebble.DB) http.HandlerFunc {
 			return
 		}
 
+		focus := r.URL.Query().Get("focus")
 		layout := computeLayout(len(nodes), winW, winH)
 		cells := make([]cellData, 0, len(nodes))
 		for _, s := range nodes {
 			htmlBytes := ansihtml.ConvertToHTML([]byte(renderANSI(s)))
 			offline := s.UpdatedAt == 0 || time.Since(time.Unix(0, s.UpdatedAt)) > 15*time.Second
+
+			query := r.URL.Query()
+			copyQuery := make(map[string][]string, len(query))
+			for k, v := range query {
+				copyQuery[k] = append([]string(nil), v...)
+			}
+			queryValues := url.Values(copyQuery)
+			queryValues.Set("focus", s.Name)
+			queryValues.Set("w", fmt.Sprintf("%d", winW))
+			queryValues.Set("h", fmt.Sprintf("%d", winH))
+			urlStr := "?" + queryValues.Encode()
+
 			cells = append(cells, cellData{
 				Name:    s.Name,
+				URL:     urlStr,
 				HTML:    template.HTML(htmlBytes),
 				Offline: offline,
+				Focused: focus != "" && focus == s.Name,
 			})
 		}
 
+		filtered := cells
+		if focus != "" {
+			filtered = nil
+			for _, cell := range cells {
+				if cell.Focused {
+					filtered = append(filtered, cell)
+				}
+			}
+			if len(filtered) == 0 {
+				filtered = cells
+			}
+		}
+
+		refreshMs := computeRefreshIntervalMs(nodes)
+		bestHint := findBestNodeHint(nodes)
+		clearQuery := r.URL.Query()
+		copyClearQuery := make(map[string][]string, len(clearQuery))
+		for k, v := range clearQuery {
+			copyClearQuery[k] = append([]string(nil), v...)
+		}
+		clearValues := url.Values(copyClearQuery)
+		clearValues.Del("focus")
+		clearFocusURL := "/"
+		if enc := clearQuery.Encode(); enc != "" {
+			clearFocusURL = "?" + enc
+		}
+
 		var buf bytes.Buffer
-		if err := pageTmpl.Execute(&buf, pageData{Layout: layout, Nodes: cells}); err != nil {
+		if err := pageTmpl.Execute(&buf, pageData{
+			Layout:        layout,
+			Nodes:         filtered,
+			RefreshMs:     refreshMs,
+			RefreshLabel:  fmt.Sprintf("%.1fs", float64(refreshMs)/1000),
+			BestHint:      bestHint,
+			Focus:         focus,
+			ClearFocusURL: clearFocusURL,
+		}); err != nil {
 			http.Error(w, "template error", 500)
 			return
 		}

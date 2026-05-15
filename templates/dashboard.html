@@ -6,8 +6,53 @@
 <title>psstd</title>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  color-scheme: dark;
+  --bg: #0d0d0d;
+  --surface: #1a1a1a;
+  --surface-alt: #252525;
+  --border: #2a2a2a;
+  --text: #f7f7f7;
+  --muted: #9ca3af;
+  --offline: #f97316;
+  --accent: #60a5fa;
+  --toolbar: #111111;
+  --toolbar-border: #2a2a2a;
+}
+:root[data-theme='light'] {
+  color-scheme: light;
+  --bg: #f8fafc;
+  --surface: #ffffff;
+  --surface-alt: #f1f5f9;
+  --border: #cbd5e1;
+  --text: #0f172a;
+  --muted: #475569;
+  --offline: #b91c1c;
+  --accent: #2563eb;
+  --toolbar: #eef2ff;
+  --toolbar-border: #cbd5e1;
+}
+:root[data-palette='solarized'] {
+  --bg: #002b36;
+  --surface: #073642;
+  --surface-alt: #0b3b47;
+  --border: #586e75;
+  --text: #93a1a1;
+  --muted: #657b83;
+  --accent: #b58900;
+}
+:root[data-palette='tango'] {
+  --bg: #282c34;
+  --surface: #313640;
+  --surface-alt: #313640;
+  --border: #4b5263;
+  --text: #d0d0d0;
+  --muted: #94a3b8;
+  --accent: #ef8b00;
+}
 body {
-  background: #0d0d0d;
+  background: var(--bg);
+  color: var(--text);
   display: flex;
   flex-wrap: wrap;
   align-content: flex-start;
@@ -15,38 +60,151 @@ body {
   padding: 6px;
   min-height: 100vh;
 }
+.toolbar {
+  width: 100%;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  background: var(--toolbar);
+  border: 1px solid var(--toolbar-border);
+  border-radius: 8px;
+}
+.toolbar .group {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.toolbar label {
+  font-size: 0.95rem;
+  color: var(--muted);
+}
+button, select, .link-button {
+  font: inherit;
+  color: var(--text);
+  background: var(--surface-alt);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 11px;
+  text-decoration: none;
+}
+button:hover, select:hover, .link-button:hover {
+  border-color: var(--accent);
+}
+button:focus, select:focus, .link-button:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
 .cell {
   font-family: 'Courier New', Courier, monospace;
-  background: #1a1a1a;
-  border: 1px solid #2a2a2a;
-  padding: 6px 8px;
-  border-radius: 4px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  padding: 10px 12px;
+  border-radius: 8px;
   font-size: {{printf "%.3f" .Layout.FontSize}}vw;
   width: calc({{printf "%.3f" .Layout.CellWidth}}vw - 8px);
   overflow: hidden;
 }
-.cell.offline { opacity: 0.35; border-color: #550000; }
-pre { line-height: 1.3; white-space: pre; }
-/* auto-refresh every 3s — no JS framework needed */
+.cell.focused {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(96,165,250,0.16);
+}
+.cell-header {
+  margin-bottom: 8px;
+}
+.cell-header a {
+  color: var(--accent);
+  text-decoration: none;
+  font-weight: 700;
+}
+.cell-header a:hover {
+  text-decoration: underline;
+}
+.cell.offline { opacity: 0.55; border-color: var(--offline); }
+pre { line-height: 1.4; white-space: pre; color: var(--text); }
 </style>
 <script>
-  // Pass window dimensions on first load for server-side layout math,
-  // then auto-refresh to keep stats live.
-  (function() {
-    const p = new URLSearchParams(location.search);
-    if (!p.has('w')) {
-      p.set('w', window.innerWidth);
-      p.set('h', window.innerHeight);
-      location.replace('?' + p.toString());
+(function() {
+  const params = new URLSearchParams(location.search);
+  const storedTheme = localStorage.getItem('psstd-theme') || 'dark';
+  const storedPalette = localStorage.getItem('psstd-palette') || 'monochrome';
+  const theme = params.get('theme') || storedTheme;
+  const palette = params.get('palette') || storedPalette;
+  const refreshMs = {{.RefreshMs}};
+
+  document.documentElement.dataset.theme = theme;
+  document.documentElement.dataset.palette = palette;
+  localStorage.setItem('psstd-theme', theme);
+  localStorage.setItem('psstd-palette', palette);
+
+  if (!params.has('w') || !params.has('h') || params.get('theme') !== theme || params.get('palette') !== palette) {
+    params.set('w', window.innerWidth);
+    params.set('h', window.innerHeight);
+    params.set('theme', theme);
+    params.set('palette', palette);
+    location.replace('?' + params.toString());
+    return;
+  }
+
+  function updateQuery(key, value) {
+    params.set(key, value);
+    params.set('theme', document.documentElement.dataset.theme);
+    params.set('palette', document.documentElement.dataset.palette);
+    location.replace('?' + params.toString());
+  }
+
+  window.psstd = {
+    switchTheme(themeValue) {
+      document.documentElement.dataset.theme = themeValue;
+      localStorage.setItem('psstd-theme', themeValue);
+      updateQuery('theme', themeValue);
+    },
+    switchPalette(paletteValue) {
+      document.documentElement.dataset.palette = paletteValue;
+      localStorage.setItem('psstd-palette', paletteValue);
+      updateQuery('palette', paletteValue);
     }
-    setTimeout(() => location.reload(), 3000);
-  })();
+  };
+
+  window.addEventListener('DOMContentLoaded', () => {
+    const themeSelect = document.getElementById('theme-select');
+    const paletteSelect = document.getElementById('palette-select');
+    if (themeSelect) themeSelect.value = theme;
+    if (paletteSelect) paletteSelect.value = palette;
+  });
+
+  setTimeout(() => location.reload(), refreshMs);
+})();
 </script>
 </head>
 <body>
+<div class="toolbar">
+  <div class="group">
+    <strong style="color: var(--text)">Display</strong>
+    <label for="theme-select">Theme</label>
+    <select id="theme-select" onchange="window.psstd.switchTheme(this.value)">
+      <option value="dark">Dark</option>
+      <option value="light">Light</option>
+    </select>
+    <label for="palette-select">Palette</label>
+    <select id="palette-select" onchange="window.psstd.switchPalette(this.value)">
+      <option value="monochrome">Monochrome</option>
+      <option value="solarized">Solarized</option>
+      <option value="tango">Tango</option>
+    </select>
+  </div>
+  <div class="group">
+    <span style="color: var(--muted)">Auto-refresh {{.RefreshLabel}} · {{.BestHint}}</span>
+    {{if .Focus}}<a class="link-button" href="{{.ClearFocusURL}}">Show all nodes</a>{{end}}
+  </div>
+</div>
 {{range .Nodes}}
-<div class="cell{{if .Offline}} offline{{end}}">
-<pre>{{.HTML}}</pre>
+<div class="cell{{if .Offline}} offline{{end}}{{if .Focused}} focused{{end}}">
+  <div class="cell-header"><a href="{{.URL}}">{{.Name}}</a></div>
+  <pre>{{.HTML}}</pre>
 </div>
 {{end}}
 </body>

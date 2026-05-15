@@ -1,5 +1,7 @@
 # 🔗 psstd
 
+[![CI](https://github.com/OffPeakEngineer/psstd/actions/workflows/ci.yml/badge.svg)](https://github.com/OffPeakEngineer/psstd/actions/workflows/ci.yml) [![Release](https://github.com/OffPeakEngineer/psstd/actions/workflows/release.yml/badge.svg)](https://github.com/OffPeakEngineer/psstd/actions/workflows/release.yml)
+
 **Peer State Store That's Decentralized** — A lightweight, zero-config distributed key-value store for LAN clusters and Kubernetes. Each node gossips its state to peers using Memberlist; state is persisted locally in Pebble.
 
 > TL;DR: Drop a binary on multiple machines, they auto-discover via mDNS, and form a cluster. Query `/api/kv/{key}` on any node to read/write shared state.

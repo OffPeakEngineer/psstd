@@ -1,0 +1,12 @@
+{
+  "name": "psstd",
+  "private": true,
+  "devDependencies": {
+    "@commitlint/cli": "^17.7.4",
+    "@commitlint/config-conventional": "^17.7.4",
+    "@semantic-release/commit-analyzer": "^10.0.0",
+    "@semantic-release/github": "^10.0.0",
+    "@semantic-release/release-notes-generator": "^10.0.0",
+    "semantic-release": "^23.0.0"
+  }
+}

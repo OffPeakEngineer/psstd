@@ -31,4 +31,6 @@ go.work.sum
 .idea/
 .vscode/
 
+# psstd and it's default data dir
 psstd
+data/
