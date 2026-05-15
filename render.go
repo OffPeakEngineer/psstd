@@ -29,7 +29,7 @@ var pageTmpl = template.Must(
 
 // ── Stats collection ──────────────────────────────────────────────────────────
 
-func collectStats(hostname string) (NodeStats, error) {
+func collectStats(hostname, webURL string) (NodeStats, error) {
 	cpuPcts, err := cpu.Percent(200*time.Millisecond, true)
 	if err != nil {
 		return NodeStats{}, err
@@ -44,6 +44,7 @@ func collectStats(hostname string) (NodeStats, error) {
 	}
 	return NodeStats{
 		Name:      hostname,
+		WebURL:    webURL,
 		CPU:       cpuPcts,
 		MemUsed:   vmStat.Used,
 		MemTotal:  vmStat.Total,
@@ -199,22 +200,78 @@ func computeRefreshIntervalMs(nodes []NodeStats) int {
 }
 
 func findBestNodeHint(nodes []NodeStats) string {
-	best := ""
+	best := (*NodeStats)(nil)
 	bestScore := math.MaxFloat64
-	for _, s := range nodes {
-		if !nodeOnline(s) {
+	for i := range nodes {
+		s := &nodes[i]
+		if !nodeOnline(*s) {
 			continue
 		}
-		score := avgCPU(s) + s.Load[0]*10
+		score := nodeScore(*s)
 		if score < bestScore {
 			bestScore = score
-			best = fmt.Sprintf("%s (%.0f%% cpu, %.2f load)", s.Name, avgCPU(s), s.Load[0])
+			best = s
 		}
 	}
-	if best == "" {
+	if best == nil {
 		return "no responsive peers yet"
 	}
-	return "lowest-load node: " + best
+	return fmt.Sprintf("lowest-load node: %s (%.0f%% cpu, %.2f load)", best.Name, avgCPU(*best), best.Load[0])
+}
+
+func nodeScore(s NodeStats) float64 {
+	return avgCPU(s) + s.Load[0]*10
+}
+
+func findNode(nodes []NodeStats, name string) *NodeStats {
+	for i := range nodes {
+		if nodes[i].Name == name {
+			return &nodes[i]
+		}
+	}
+	return nil
+}
+
+func findLowerLoadRedirect(nodes []NodeStats, selfName string) *NodeStats {
+	self := findNode(nodes, selfName)
+	if self == nil || !nodeOnline(*self) {
+		return nil
+	}
+	selfScore := nodeScore(*self)
+	var best *NodeStats
+	bestScore := math.MaxFloat64
+	for i := range nodes {
+		s := &nodes[i]
+		if s.Name == selfName || s.WebURL == "" || !nodeOnline(*s) {
+			continue
+		}
+		score := nodeScore(*s)
+		if score < bestScore {
+			bestScore = score
+			best = s
+		}
+	}
+	if best == nil {
+		return nil
+	}
+	if bestScore <= selfScore*0.70 && selfScore-bestScore >= 10 {
+		return best
+	}
+	return nil
+}
+
+func pageURL(base string, values url.Values) string {
+	if base == "" {
+		base = "/"
+	}
+	if values == nil {
+		return base
+	}
+	encoded := values.Encode()
+	if encoded == "" {
+		return base
+	}
+	return base + "?" + encoded
 }
 
 // ── HTTP handler ──────────────────────────────────────────────────────────────
@@ -232,12 +289,13 @@ type pageData struct {
 	Nodes         []cellData
 	RefreshMs     int
 	RefreshLabel  string
+	RefreshURL    string
 	BestHint      string
 	Focus         string
 	ClearFocusURL string
 }
 
-func makeHandler(db *pebble.DB) http.HandlerFunc {
+func makeHandler(db *pebble.DB, selfName string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		winW, winH := 0, 0
 		fmt.Sscanf(r.URL.Query().Get("w"), "%d", &winW)
@@ -265,7 +323,7 @@ func makeHandler(db *pebble.DB) http.HandlerFunc {
 			queryValues.Set("focus", s.Name)
 			queryValues.Set("w", fmt.Sprintf("%d", winW))
 			queryValues.Set("h", fmt.Sprintf("%d", winH))
-			urlStr := "?" + queryValues.Encode()
+			urlStr := pageURL(s.WebURL, queryValues)
 
 			cells = append(cells, cellData{
 				Name:    s.Name,
@@ -291,6 +349,13 @@ func makeHandler(db *pebble.DB) http.HandlerFunc {
 
 		refreshMs := computeRefreshIntervalMs(nodes)
 		bestHint := findBestNodeHint(nodes)
+		refreshValues := r.URL.Query()
+		refreshValues.Set("w", fmt.Sprintf("%d", winW))
+		refreshValues.Set("h", fmt.Sprintf("%d", winH))
+		refreshURL := pageURL("/", refreshValues)
+		if redirectNode := findLowerLoadRedirect(nodes, selfName); redirectNode != nil {
+			refreshURL = pageURL(redirectNode.WebURL, refreshValues)
+		}
 		clearQuery := r.URL.Query()
 		copyClearQuery := make(map[string][]string, len(clearQuery))
 		for k, v := range clearQuery {
@@ -298,10 +363,7 @@ func makeHandler(db *pebble.DB) http.HandlerFunc {
 		}
 		clearValues := url.Values(copyClearQuery)
 		clearValues.Del("focus")
-		clearFocusURL := "/"
-		if enc := clearQuery.Encode(); enc != "" {
-			clearFocusURL = "?" + enc
-		}
+		clearFocusURL := pageURL("/", clearValues)
 
 		var buf bytes.Buffer
 		if err := pageTmpl.Execute(&buf, pageData{
@@ -309,6 +371,7 @@ func makeHandler(db *pebble.DB) http.HandlerFunc {
 			Nodes:         filtered,
 			RefreshMs:     refreshMs,
 			RefreshLabel:  fmt.Sprintf("%.1fs", float64(refreshMs)/1000),
+			RefreshURL:    refreshURL,
 			BestHint:      bestHint,
 			Focus:         focus,
 			ClearFocusURL: clearFocusURL,

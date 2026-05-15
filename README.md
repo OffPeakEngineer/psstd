@@ -42,6 +42,7 @@ open http://localhost:8080
 ```bash
 export PSSTD_DB="/custom/db/path"      # database directory (default: ./data)
 export PSSTD_HTTP=":9000"              # HTTP listen address (default: :8080)
+export PSSTD_ADVERTISE_HTTP="http://192.168.1.10:9000" # browser-reachable node URL
 export PSSTD_GOSSIP=":7947"            # Gossip listen port (default: :7946)
 export PSSTD_SEEDS="192.168.1.10:7946" # comma-separated seed peers
 export PSSTD_WEB="true"                # enable/disable web UI (default: true)

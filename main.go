@@ -19,6 +19,7 @@ const (
 	envHTTP    = "PSSTD_HTTP"
 	envGossip  = "PSSTD_GOSSIP"
 	envSeeds   = "PSSTD_SEEDS"
+	envHTTPAd  = "PSSTD_ADVERTISE_HTTP"
 	envWeb     = "PSSTD_WEB" // "true" to enable HTTP, default true
 	gossipPort = 7946
 	httpPort   = 8080
@@ -32,6 +33,13 @@ func main() {
 	gossipAddr := envOr(envGossip, fmt.Sprintf(":%d", gossipPort))
 	seeds := splitCSV(envOr(envSeeds, ""))
 	webEnabled := envOr(envWeb, "true") != "false"
+	webURL := advertisedHTTPURL(httpAddr)
+	if override := os.Getenv(envHTTPAd); override != "" {
+		webURL = override
+	}
+	if !webEnabled {
+		webURL = ""
+	}
 
 	// ── Pebble ──────────────────────────────────────────────────────────────
 	db, err := pebble.Open(dbPath, &pebble.Options{})
@@ -58,11 +66,11 @@ func main() {
 
 	// ── Discovery ────────────────────────────────────────────────────────────
 	// 1. Register ourselves via mDNS so peers can find us on LAN
-	stopMDNS := registerMDNS(hostname, gossipPort)
+	stopMDNS := registerMDNS(hostname, cfg.BindPort)
 	defer stopMDNS()
 
 	// 2. Scan for existing peers (mDNS + any explicit seeds)
-	discovered := discoverPeers(gossipPort)
+	discovered := discoverPeers(cfg.BindPort)
 	allSeeds := append(seeds, discovered...)
 	if len(allSeeds) > 0 {
 		if n, err := list.Join(allSeeds); err != nil {
@@ -75,17 +83,17 @@ func main() {
 	}
 
 	// ── Stats heartbeat ──────────────────────────────────────────────────────
-	go statsLoop(hostname, db, delegate)
+	go statsLoop(hostname, webURL, db, delegate)
 
 	// ── HTTP ─────────────────────────────────────────────────────────────────
 	if webEnabled {
 		mux := http.NewServeMux()
-		mux.HandleFunc("/", makeHandler(db))
+		mux.HandleFunc("/", makeHandler(db, hostname))
 		mux.HandleFunc("/healthz", func(w http.ResponseWriter, _ *http.Request) {
 			w.WriteHeader(200)
 			fmt.Fprintln(w, "ok")
 		})
-		log.Printf("psstd — node=%s http=%s gossip=%s web=true", hostname, httpAddr, gossipAddr)
+		log.Printf("psstd — node=%s http=%s advertise=%s gossip=%s web=true", hostname, httpAddr, webURL, gossipAddr)
 		if err := http.ListenAndServe(httpAddr, mux); err != nil {
 			log.Fatalf("http: %v", err)
 		}
@@ -97,11 +105,11 @@ func main() {
 
 // ── Stats loop ───────────────────────────────────────────────────────────────
 
-func statsLoop(hostname string, db *pebble.DB, d *kvDelegate) {
+func statsLoop(hostname, webURL string, db *pebble.DB, d *kvDelegate) {
 	ticker := time.NewTicker(2 * time.Second)
 	defer ticker.Stop()
 	for range ticker.C {
-		stats, err := collectStats(hostname)
+		stats, err := collectStats(hostname, webURL)
 		if err != nil {
 			log.Printf("stats error: %v", err)
 			continue
@@ -173,4 +181,49 @@ func splitHostPort(addr string) (string, int) {
 		host = "0.0.0.0"
 	}
 	return host, port
+}
+
+func advertisedHTTPURL(httpAddr string) string {
+	host, portStr, err := net.SplitHostPort(httpAddr)
+	if err != nil {
+		host = ""
+		portStr = fmt.Sprintf("%d", httpPort)
+	}
+	if host == "" || host == "0.0.0.0" || host == "::" {
+		host = firstAdvertisableIP()
+	}
+	if host == "" {
+		host = "localhost"
+	}
+	return "http://" + net.JoinHostPort(host, portStr)
+}
+
+func firstAdvertisableIP() string {
+	ifaces, err := net.Interfaces()
+	if err != nil {
+		return ""
+	}
+	for _, iface := range ifaces {
+		if iface.Flags&net.FlagUp == 0 || iface.Flags&net.FlagLoopback != 0 {
+			continue
+		}
+		addrs, err := iface.Addrs()
+		if err != nil {
+			continue
+		}
+		for _, a := range addrs {
+			ipnet, ok := a.(*net.IPNet)
+			if !ok {
+				continue
+			}
+			ip := ipnet.IP
+			if ip == nil || ip.IsLoopback() || ip.IsUnspecified() {
+				continue
+			}
+			if v4 := ip.To4(); v4 != nil {
+				return v4.String()
+			}
+		}
+	}
+	return ""
 }

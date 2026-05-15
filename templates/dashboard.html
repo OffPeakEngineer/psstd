@@ -176,7 +176,7 @@ pre { line-height: 1.4; white-space: pre; color: var(--text); }
     if (paletteSelect) paletteSelect.value = palette;
   });
 
-  setTimeout(() => location.reload(), refreshMs);
+  setTimeout(() => location.replace({{printf "%q" .RefreshURL}}), refreshMs);
 })();
 </script>
 </head>

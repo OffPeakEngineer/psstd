@@ -11,6 +11,7 @@ import (
 
 type NodeStats struct {
 	Name      string     `json:"name"`
+	WebURL    string     `json:"web,omitempty"`
 	CPU       []float64  `json:"cpu"`
 	MemUsed   uint64     `json:"mu"`
 	MemTotal  uint64     `json:"mt"`
