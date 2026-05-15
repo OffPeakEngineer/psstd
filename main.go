@@ -41,14 +41,14 @@ func main() {
 		webURL = ""
 	}
 
-	// ── Pebble ──────────────────────────────────────────────────────────────
+	// ── Local state ─────────────────────────────────────────────────────────
 	db, err := pebble.Open(dbPath, &pebble.Options{})
 	if err != nil {
 		log.Fatalf("pebble open: %v", err)
 	}
 	defer db.Close()
 
-	// ── Gossip delegate ──────────────────────────────────────────────────────
+	// ── Peer sync ───────────────────────────────────────────────────────────
 	delegate := newKVDelegate(db)
 
 	cfg := memberlist.DefaultLANConfig()
@@ -70,7 +70,7 @@ func main() {
 	defer stopMDNS()
 
 	// 2. Scan for existing peers (mDNS + any explicit seeds)
-	discovered := discoverPeers(cfg.BindPort)
+	discovered := discoverPeers()
 	allSeeds := append(seeds, discovered...)
 	if len(allSeeds) > 0 {
 		if n, err := list.Join(allSeeds); err != nil {
@@ -82,7 +82,7 @@ func main() {
 		log.Println("no peers found — running solo, will be discovered by others")
 	}
 
-	// ── Stats heartbeat ──────────────────────────────────────────────────────
+	// ── Stats heartbeat ─────────────────────────────────────────────────────
 	go statsLoop(hostname, webURL, db, delegate)
 
 	// ── HTTP ─────────────────────────────────────────────────────────────────
@@ -93,12 +93,12 @@ func main() {
 			w.WriteHeader(200)
 			fmt.Fprintln(w, "ok")
 		})
-		log.Printf("psstd — node=%s http=%s advertise=%s gossip=%s web=true", hostname, httpAddr, webURL, gossipAddr)
+		log.Printf("psstd node=%s http=%s advertise=%s gossip=%s web=true", hostname, httpAddr, webURL, gossipAddr)
 		if err := http.ListenAndServe(httpAddr, mux); err != nil {
 			log.Fatalf("http: %v", err)
 		}
 	} else {
-		log.Printf("psstd — node=%s gossip=%s web=false", hostname, gossipAddr)
+		log.Printf("psstd node=%s gossip=%s web=false", hostname, gossipAddr)
 		select {} // block forever
 	}
 }
@@ -122,7 +122,7 @@ func statsLoop(hostname, webURL string, db *pebble.DB, d *kvDelegate) {
 	}
 }
 
-// ── Event delegate (node leave/fail → mark offline immediately) ──────────────
+// ── Event delegate (node leave/fail -> mark offline immediately) ─────────────
 
 type eventDelegate struct{ db *pebble.DB }
 
@@ -144,7 +144,7 @@ func markOffline(db *pebble.DB, name string) {
 	}
 	var s NodeStats
 	if json.Unmarshal(existing, &s) == nil {
-		s.UpdatedAt = 0 // zero ts → immediately stale in render
+		s.UpdatedAt = 0 // zero timestamp renders as offline immediately
 		b, _ := json.Marshal(s)
 		db.Set(keyFor(name), b, pebble.Sync)
 	}

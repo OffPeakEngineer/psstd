@@ -261,6 +261,7 @@ func findLowerLoadRedirect(nodes []NodeStats, selfName string) *NodeStats {
 }
 
 func pageURL(base string, values url.Values) string {
+	base = normalizePageBase(base)
 	if base == "" {
 		base = "/"
 	}
@@ -274,6 +275,34 @@ func pageURL(base string, values url.Values) string {
 	return base + "?" + encoded
 }
 
+func normalizePageBase(base string) string {
+	if base == "" || strings.HasPrefix(base, "/") {
+		return base
+	}
+	parsed, err := url.Parse(base)
+	if err != nil || (parsed.Scheme != "http" && parsed.Scheme != "https") || parsed.Host == "" {
+		return "/"
+	}
+	parsed.RawQuery = ""
+	parsed.Fragment = ""
+	if parsed.Path == "" {
+		parsed.Path = "/"
+	}
+	return parsed.String()
+}
+
+func displayQuery(r *http.Request, winW, winH int) url.Values {
+	values := url.Values{}
+	for _, key := range []string{"theme", "palette"} {
+		if value := r.URL.Query().Get(key); value != "" {
+			values.Set(key, value)
+		}
+	}
+	values.Set("w", fmt.Sprintf("%d", winW))
+	values.Set("h", fmt.Sprintf("%d", winH))
+	return values
+}
+
 // ── HTTP handler ──────────────────────────────────────────────────────────────
 
 type cellData struct {
@@ -281,18 +310,15 @@ type cellData struct {
 	URL     string
 	HTML    template.HTML
 	Offline bool
-	Focused bool
 }
 
 type pageData struct {
-	Layout        layoutParams
-	Nodes         []cellData
-	RefreshMs     int
-	RefreshLabel  string
-	RefreshURL    string
-	BestHint      string
-	Focus         string
-	ClearFocusURL string
+	Layout       layoutParams
+	Nodes        []cellData
+	RefreshMs    int
+	RefreshLabel string
+	RefreshURL   string
+	BestHint     string
 }
 
 func makeHandler(db *pebble.DB, selfName string) http.HandlerFunc {
@@ -307,74 +333,36 @@ func makeHandler(db *pebble.DB, selfName string) http.HandlerFunc {
 			return
 		}
 
-		focus := r.URL.Query().Get("focus")
 		layout := computeLayout(len(nodes), winW, winH)
 		cells := make([]cellData, 0, len(nodes))
 		for _, s := range nodes {
 			htmlBytes := ansihtml.ConvertToHTML([]byte(renderANSI(s)))
 			offline := s.UpdatedAt == 0 || time.Since(time.Unix(0, s.UpdatedAt)) > 15*time.Second
 
-			query := r.URL.Query()
-			copyQuery := make(map[string][]string, len(query))
-			for k, v := range query {
-				copyQuery[k] = append([]string(nil), v...)
-			}
-			queryValues := url.Values(copyQuery)
-			queryValues.Set("focus", s.Name)
-			queryValues.Set("w", fmt.Sprintf("%d", winW))
-			queryValues.Set("h", fmt.Sprintf("%d", winH))
-			urlStr := pageURL(s.WebURL, queryValues)
-
 			cells = append(cells, cellData{
 				Name:    s.Name,
-				URL:     urlStr,
+				URL:     pageURL(s.WebURL, displayQuery(r, winW, winH)),
 				HTML:    template.HTML(htmlBytes),
 				Offline: offline,
-				Focused: focus != "" && focus == s.Name,
 			})
-		}
-
-		filtered := cells
-		if focus != "" {
-			filtered = nil
-			for _, cell := range cells {
-				if cell.Focused {
-					filtered = append(filtered, cell)
-				}
-			}
-			if len(filtered) == 0 {
-				filtered = cells
-			}
 		}
 
 		refreshMs := computeRefreshIntervalMs(nodes)
 		bestHint := findBestNodeHint(nodes)
-		refreshValues := r.URL.Query()
-		refreshValues.Set("w", fmt.Sprintf("%d", winW))
-		refreshValues.Set("h", fmt.Sprintf("%d", winH))
+		refreshValues := displayQuery(r, winW, winH)
 		refreshURL := pageURL("/", refreshValues)
 		if redirectNode := findLowerLoadRedirect(nodes, selfName); redirectNode != nil {
 			refreshURL = pageURL(redirectNode.WebURL, refreshValues)
 		}
-		clearQuery := r.URL.Query()
-		copyClearQuery := make(map[string][]string, len(clearQuery))
-		for k, v := range clearQuery {
-			copyClearQuery[k] = append([]string(nil), v...)
-		}
-		clearValues := url.Values(copyClearQuery)
-		clearValues.Del("focus")
-		clearFocusURL := pageURL("/", clearValues)
 
 		var buf bytes.Buffer
 		if err := pageTmpl.Execute(&buf, pageData{
-			Layout:        layout,
-			Nodes:         filtered,
-			RefreshMs:     refreshMs,
-			RefreshLabel:  fmt.Sprintf("%.1fs", float64(refreshMs)/1000),
-			RefreshURL:    refreshURL,
-			BestHint:      bestHint,
-			Focus:         focus,
-			ClearFocusURL: clearFocusURL,
+			Layout:       layout,
+			Nodes:        cells,
+			RefreshMs:    refreshMs,
+			RefreshLabel: fmt.Sprintf("%.1fs", float64(refreshMs)/1000),
+			RefreshURL:   refreshURL,
+			BestHint:     bestHint,
 		}); err != nil {
 			http.Error(w, "template error", 500)
 			return

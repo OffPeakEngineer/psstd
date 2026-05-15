@@ -10,7 +10,7 @@ import (
 )
 
 const mdnsService = "_psstd._tcp"
-const mdnsDomain  = "local."
+const mdnsDomain = "local."
 
 // registerMDNS advertises this node on the LAN via mDNS.
 // Returns a stop func.
@@ -30,8 +30,8 @@ func registerMDNS(hostname string, port int) func() {
 	return func() { server.Shutdown() }
 }
 
-// discoverPeers scans mDNS for other psstd nodes and returns their addresses.
-func discoverPeers(gossipPort int) []string {
+// discoverPeers scans mDNS for other psstd nodes and returns their gossip addresses.
+func discoverPeers() []string {
 	entries := make(chan *mdns.ServiceEntry, 16)
 	var peers []string
 
@@ -62,7 +62,7 @@ func discoverPeers(gossipPort int) []string {
 		if isSelf(addr, self) {
 			continue
 		}
-		peer := fmt.Sprintf("%s:%d", addr.String(), gossipPort)
+		peer := fmt.Sprintf("%s:%d", addr.String(), entry.Port)
 		log.Printf("mDNS: discovered peer %s (%s)", entry.Name, peer)
 		peers = append(peers, peer)
 	}
