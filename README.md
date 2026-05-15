@@ -51,6 +51,48 @@ export PSSTD_WEB="true"                           # set false for sync-only node
 | Mixed setup | mDNS discoveries and explicit seeds are merged |
 | Single node | Renders solo until peers appear |
 
+## Service Templates
+
+Templates live in `deploy/` for common ways to keep psstd running:
+
+| Target | Template |
+|---|---|
+| Linux systemd | `deploy/systemd/psstd.service` and `deploy/systemd/psstd.env` |
+| macOS launchd | `deploy/launchd/com.offpeakengineer.psstd.plist` |
+| Windows service | `deploy/windows/install-service.ps1` using NSSM |
+| Kubernetes | `deploy/kubernetes/psstd.yaml` |
+| Ansible | `deploy/ansible/install-psstd.yml` |
+
+Linux systemd quick install from a built binary:
+
+```bash
+go build -o psstd ./
+sudo sh deploy/systemd/install.sh
+sudoedit /etc/psstd/psstd.env
+sudo systemctl restart psstd
+```
+
+macOS launchd:
+
+```bash
+sudo install -m 0755 psstd /usr/local/bin/psstd
+sudo mkdir -p /usr/local/var/psstd /usr/local/var/log
+sudo cp deploy/launchd/com.offpeakengineer.psstd.plist /Library/LaunchDaemons/
+sudo launchctl bootstrap system /Library/LaunchDaemons/com.offpeakengineer.psstd.plist
+```
+
+Windows service:
+
+```powershell
+.\deploy\windows\install-service.ps1 -BinaryPath "C:\Program Files\psstd\psstd.exe" -AdvertiseHttp "http://10.0.1.25:8080"
+```
+
+Kubernetes:
+
+```bash
+kubectl apply -f deploy/kubernetes/psstd.yaml
+```
+
 ## Health Check
 
 ```bash

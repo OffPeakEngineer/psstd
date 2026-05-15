@@ -1,0 +1,20 @@
+[Unit]
+Description=psstd resilient cluster htop
+Documentation=https://github.com/OffPeakEngineer/psstd
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=psstd
+Group=psstd
+EnvironmentFile=-/etc/psstd/psstd.env
+ExecStart=/usr/local/bin/psstd
+Restart=always
+RestartSec=3
+StateDirectory=psstd
+WorkingDirectory=/var/lib/psstd
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target

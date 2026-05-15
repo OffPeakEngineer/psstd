@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.offpeakengineer.psstd</string>
+
+  <key>ProgramArguments</key>
+  <array>
+    <string>/usr/local/bin/psstd</string>
+  </array>
+
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>PSSTD_HTTP</key>
+    <string>:8080</string>
+    <key>PSSTD_ADVERTISE_HTTP</key>
+    <string>http://CHANGE_ME:8080</string>
+    <key>PSSTD_GOSSIP</key>
+    <string>:7946</string>
+    <key>PSSTD_SEEDS</key>
+    <string></string>
+    <key>PSSTD_DB</key>
+    <string>/usr/local/var/psstd</string>
+    <key>PSSTD_WEB</key>
+    <string>true</string>
+  </dict>
+
+  <key>WorkingDirectory</key>
+  <string>/usr/local/var/psstd</string>
+  <key>RunAtLoad</key>
+  <true/>
+  <key>KeepAlive</key>
+  <true/>
+  <key>StandardOutPath</key>
+  <string>/usr/local/var/log/psstd.log</string>
+  <key>StandardErrorPath</key>
+  <string>/usr/local/var/log/psstd.err.log</string>
+</dict>
+</plist>

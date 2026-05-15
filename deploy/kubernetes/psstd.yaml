@@ -1,0 +1,65 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: psstd
+  labels:
+    app: psstd
+spec:
+  clusterIP: None
+  selector:
+    app: psstd
+  ports:
+    - name: http
+      port: 8080
+      targetPort: http
+    - name: gossip
+      port: 7946
+      targetPort: gossip
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: psstd
+  labels:
+    app: psstd
+spec:
+  selector:
+    matchLabels:
+      app: psstd
+  template:
+    metadata:
+      labels:
+        app: psstd
+    spec:
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
+      containers:
+        - name: psstd
+          image: ghcr.io/offpeakengineer/psstd:latest
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: NODE_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.hostIP
+            - name: PSSTD_HTTP
+              value: ":8080"
+            - name: PSSTD_ADVERTISE_HTTP
+              value: "http://$(NODE_IP):8080"
+            - name: PSSTD_GOSSIP
+              value: ":7946"
+            - name: PSSTD_SEEDS
+              value: "psstd.default.svc.cluster.local:7946"
+            - name: PSSTD_DB
+              value: "/data"
+          ports:
+            - name: http
+              containerPort: 8080
+            - name: gossip
+              containerPort: 7946
+          volumeMounts:
+            - name: data
+              mountPath: /data
+      volumes:
+        - name: data
+          emptyDir: {}
