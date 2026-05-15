@@ -27,10 +27,10 @@ const (
 func main() {
 	hostname, _ := os.Hostname()
 
-	dbPath     := envOr(envDB,     "/var/lib/psstd/state")
-	httpAddr   := envOr(envHTTP,   fmt.Sprintf(":%d", httpPort))
+	dbPath := envOr(envDB, "./data")
+	httpAddr := envOr(envHTTP, fmt.Sprintf(":%d", httpPort))
 	gossipAddr := envOr(envGossip, fmt.Sprintf(":%d", gossipPort))
-	seeds      := splitCSV(envOr(envSeeds, ""))
+	seeds := splitCSV(envOr(envSeeds, ""))
 	webEnabled := envOr(envWeb, "true") != "false"
 
 	// ── Pebble ──────────────────────────────────────────────────────────────
