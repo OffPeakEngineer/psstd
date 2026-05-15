@@ -34,7 +34,7 @@ func init() {
 
 // ── Stats collection ──────────────────────────────────────────────────────────
 
-func collectStats(hostname, webURL string) (NodeStats, error) {
+func collectStats(hostname, webURL, version string) (NodeStats, error) {
 	cpuPcts, err := cpu.Percent(200*time.Millisecond, true)
 	if err != nil {
 		return NodeStats{}, err
@@ -49,6 +49,7 @@ func collectStats(hostname, webURL string) (NodeStats, error) {
 	}
 	return NodeStats{
 		Name:      hostname,
+		Version:   version,
 		WebURL:    webURL,
 		CPU:       cpuPcts,
 		MemUsed:   vmStat.Used,

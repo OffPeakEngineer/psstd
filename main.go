@@ -47,15 +47,18 @@ func main() {
 		log.Fatalf("pebble open: %v", err)
 	}
 	defer db.Close()
+	if err := purgeOfflineDifferentVersion(db, appVersion); err != nil {
+		log.Printf("stale version purge: %v", err)
+	}
 
 	// ── Peer sync ───────────────────────────────────────────────────────────
-	delegate := newKVDelegate(db)
+	delegate := newKVDelegate(db, appVersion)
 
 	cfg := memberlist.DefaultLANConfig()
 	cfg.Name = hostname
 	cfg.BindAddr, cfg.BindPort = splitHostPort(gossipAddr)
 	cfg.Delegate = delegate
-	cfg.Events = newEventDelegate(db)
+	cfg.Events = newEventDelegate(db, appVersion)
 	cfg.Logger = log.New(os.Stderr, "[memberlist] ", log.LstdFlags)
 
 	list, err := memberlist.Create(cfg)
@@ -83,7 +86,7 @@ func main() {
 	}
 
 	// ── Stats heartbeat ─────────────────────────────────────────────────────
-	go statsLoop(hostname, webURL, db, delegate)
+	go statsLoop(hostname, webURL, appVersion, db, delegate)
 
 	// ── HTTP ─────────────────────────────────────────────────────────────────
 	if webEnabled {
@@ -93,23 +96,23 @@ func main() {
 			w.WriteHeader(200)
 			fmt.Fprintln(w, "ok")
 		})
-		log.Printf("psstd node=%s http=%s advertise=%s gossip=%s web=true", hostname, httpAddr, webURL, gossipAddr)
+		log.Printf("psstd version=%s node=%s http=%s advertise=%s gossip=%s web=true", appVersion, hostname, httpAddr, webURL, gossipAddr)
 		if err := http.ListenAndServe(httpAddr, mux); err != nil {
 			log.Fatalf("http: %v", err)
 		}
 	} else {
-		log.Printf("psstd node=%s gossip=%s web=false", hostname, gossipAddr)
+		log.Printf("psstd version=%s node=%s gossip=%s web=false", appVersion, hostname, gossipAddr)
 		select {} // block forever
 	}
 }
 
 // ── Stats loop ───────────────────────────────────────────────────────────────
 
-func statsLoop(hostname, webURL string, db *pebble.DB, d *kvDelegate) {
+func statsLoop(hostname, webURL, version string, db *pebble.DB, d *kvDelegate) {
 	ticker := time.NewTicker(2 * time.Second)
 	defer ticker.Stop()
 	for range ticker.C {
-		stats, err := collectStats(hostname, webURL)
+		stats, err := collectStats(hostname, webURL, version)
 		if err != nil {
 			log.Printf("stats error: %v", err)
 			continue
@@ -124,26 +127,38 @@ func statsLoop(hostname, webURL string, db *pebble.DB, d *kvDelegate) {
 
 // ── Event delegate (node leave/fail -> mark offline immediately) ─────────────
 
-type eventDelegate struct{ db *pebble.DB }
+type eventDelegate struct {
+	db      *pebble.DB
+	version string
+}
 
-func newEventDelegate(db *pebble.DB) *eventDelegate { return &eventDelegate{db} }
+func newEventDelegate(db *pebble.DB, version string) *eventDelegate {
+	return &eventDelegate{db: db, version: version}
+}
 
 func (e *eventDelegate) NotifyJoin(n *memberlist.Node) {
 	log.Printf("[psstd] node joined: %s", n.Name)
 }
 func (e *eventDelegate) NotifyLeave(n *memberlist.Node) {
 	log.Printf("[psstd] node left: %s", n.Name)
-	markOffline(e.db, n.Name)
+	markOffline(e.db, n.Name, e.version)
 }
 func (e *eventDelegate) NotifyUpdate(n *memberlist.Node) {}
 
-func markOffline(db *pebble.DB, name string) {
+func markOffline(db *pebble.DB, name, version string) {
 	existing, closer, err := db.Get(keyFor(name))
 	if err != nil {
 		return
 	}
 	var s NodeStats
 	if json.Unmarshal(existing, &s) == nil {
+		if s.Version != version {
+			closer.Close()
+			if err := db.Delete(keyFor(name), pebble.Sync); err != nil {
+				log.Printf("purge stale offline node %s: %v", name, err)
+			}
+			return
+		}
 		s.UpdatedAt = 0 // zero timestamp renders as offline immediately
 		b, _ := json.Marshal(s)
 		db.Set(keyFor(name), b, pebble.Sync)

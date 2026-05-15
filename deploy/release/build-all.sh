@@ -2,6 +2,7 @@
 set -eu
 
 mkdir -p dist
+version="${PSSTD_VERSION:-$(git describe --tags --always --dirty 2>/dev/null || echo dev)}"
 
 build() {
   goos="$1"
@@ -9,7 +10,7 @@ build() {
   ext="${3:-}"
   out="dist/psstd-${goos}-${goarch}${ext}"
   echo "building ${out}"
-  CGO_ENABLED=0 GOOS="$goos" GOARCH="$goarch" go build -trimpath -ldflags="-s -w" -o "$out" .
+  CGO_ENABLED=0 GOOS="$goos" GOARCH="$goarch" go build -trimpath -ldflags="-s -w -X main.appVersion=${version}" -o "$out" .
 }
 
 build linux amd64

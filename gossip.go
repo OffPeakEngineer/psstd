@@ -2,15 +2,20 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"log"
 	"sync"
+	"time"
 
 	"github.com/cockroachdb/pebble/v2"
 	"github.com/hashicorp/memberlist"
 )
 
+var appVersion = "dev"
+
 type NodeStats struct {
 	Name      string     `json:"name"`
+	Version   string     `json:"version,omitempty"`
 	WebURL    string     `json:"web,omitempty"`
 	CPU       []float64  `json:"cpu"`
 	MemUsed   uint64     `json:"mu"`
@@ -18,6 +23,8 @@ type NodeStats struct {
 	Load      [3]float64 `json:"ld"`
 	UpdatedAt int64      `json:"ts"` // unix nano, LWW key
 }
+
+var errStaleVersion = errors.New("stale version")
 
 func keyFor(name string) []byte { return []byte("node/" + name) }
 
@@ -31,13 +38,25 @@ func dbSet(db *pebble.DB, s NodeStats) error {
 	return db.Set(keyFor(s.Name), b, pebble.Sync)
 }
 
-func dbMergeLWW(db *pebble.DB, s NodeStats) error {
+func dbMergeLWW(db *pebble.DB, s NodeStats, version string) error {
+	if s.Version != version && nodeRecordOffline(s) {
+		return errStaleVersion
+	}
 	existing, closer, err := db.Get(keyFor(s.Name))
 	if err == nil {
 		var cur NodeStats
-		if json.Unmarshal(existing, &cur) == nil && cur.UpdatedAt >= s.UpdatedAt {
-			closer.Close()
-			return nil
+		if json.Unmarshal(existing, &cur) == nil {
+			if cur.Version != "" && cur.Version != s.Version && nodeRecordOffline(cur) {
+				closer.Close()
+				if err := db.Delete(keyFor(s.Name), pebble.Sync); err != nil {
+					return err
+				}
+				return dbSet(db, s)
+			}
+			if cur.UpdatedAt >= s.UpdatedAt {
+				closer.Close()
+				return nil
+			}
 		}
 		closer.Close()
 	}
@@ -71,17 +90,39 @@ func dbSnapshot(db *pebble.DB) ([]byte, error) {
 	return json.Marshal(nodes)
 }
 
+func purgeOfflineDifferentVersion(db *pebble.DB, version string) error {
+	nodes, err := dbScanAll(db)
+	if err != nil {
+		return err
+	}
+	for _, s := range nodes {
+		if s.Version != version && nodeRecordOffline(s) {
+			if err := db.Delete(keyFor(s.Name), pebble.Sync); err != nil {
+				return err
+			}
+			log.Printf("purged stale offline node %s version=%q current=%q", s.Name, s.Version, version)
+		}
+	}
+	return nil
+}
+
+func nodeRecordOffline(s NodeStats) bool {
+	return s.UpdatedAt == 0 || time.Since(time.Unix(0, s.UpdatedAt)) > 15*time.Second
+}
+
 // ── Delegate ──────────────────────────────────────────────────────────────────
 
 type kvDelegate struct {
 	db         *pebble.DB
+	version    string
 	broadcasts *memberlist.TransmitLimitedQueue
 	mu         sync.Mutex
 }
 
-func newKVDelegate(db *pebble.DB) *kvDelegate {
+func newKVDelegate(db *pebble.DB, version string) *kvDelegate {
 	return &kvDelegate{
-		db: db,
+		db:      db,
+		version: version,
 		broadcasts: &memberlist.TransmitLimitedQueue{
 			NumNodes:       func() int { return 1 },
 			RetransmitMult: 3,
@@ -101,7 +142,7 @@ func (d *kvDelegate) NotifyMsg(buf []byte) {
 	if json.Unmarshal(cp, &s) != nil {
 		return
 	}
-	if err := dbMergeLWW(d.db, s); err != nil {
+	if err := dbMergeLWW(d.db, s, d.version); err != nil && !errors.Is(err, errStaleVersion) {
 		log.Printf("NotifyMsg merge: %v", err)
 	}
 }
@@ -128,7 +169,7 @@ func (d *kvDelegate) MergeRemoteState(buf []byte, _ bool) {
 		return
 	}
 	for _, s := range nodes {
-		if err := dbMergeLWW(d.db, s); err != nil {
+		if err := dbMergeLWW(d.db, s, d.version); err != nil && !errors.Is(err, errStaleVersion) {
 			log.Printf("MergeRemoteState: %v", err)
 		}
 	}
