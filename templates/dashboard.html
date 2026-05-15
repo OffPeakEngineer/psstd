@@ -39,7 +39,10 @@
   --border: #586e75;
   --text: #93a1a1;
   --muted: #657b83;
+  --offline: #dc322f;
   --accent: #b58900;
+  --toolbar: #00212b;
+  --toolbar-border: #586e75;
 }
 :root[data-palette='tango'] {
   --bg: #282c34;
@@ -48,7 +51,131 @@
   --border: #4b5263;
   --text: #d0d0d0;
   --muted: #94a3b8;
+  --offline: #ef4444;
   --accent: #ef8b00;
+  --toolbar: #20242b;
+  --toolbar-border: #4b5263;
+}
+:root[data-palette='nord'] {
+  --bg: #2e3440;
+  --surface: #3b4252;
+  --surface-alt: #434c5e;
+  --border: #4c566a;
+  --text: #eceff4;
+  --muted: #d8dee9;
+  --offline: #bf616a;
+  --accent: #88c0d0;
+  --toolbar: #242933;
+  --toolbar-border: #4c566a;
+}
+:root[data-palette='gruvbox'] {
+  --bg: #282828;
+  --surface: #32302f;
+  --surface-alt: #3c3836;
+  --border: #665c54;
+  --text: #ebdbb2;
+  --muted: #a89984;
+  --offline: #fb4934;
+  --accent: #fabd2f;
+  --toolbar: #1d2021;
+  --toolbar-border: #665c54;
+}
+:root[data-palette='dracula'] {
+  --bg: #282a36;
+  --surface: #343746;
+  --surface-alt: #44475a;
+  --border: #6272a4;
+  --text: #f8f8f2;
+  --muted: #bd93f9;
+  --offline: #ff5555;
+  --accent: #50fa7b;
+  --toolbar: #21222c;
+  --toolbar-border: #6272a4;
+}
+:root[data-palette='catppuccin'] {
+  --bg: #1e1e2e;
+  --surface: #313244;
+  --surface-alt: #45475a;
+  --border: #585b70;
+  --text: #cdd6f4;
+  --muted: #a6adc8;
+  --offline: #f38ba8;
+  --accent: #89b4fa;
+  --toolbar: #181825;
+  --toolbar-border: #585b70;
+}
+:root[data-palette='everforest'] {
+  --bg: #2d353b;
+  --surface: #343f44;
+  --surface-alt: #3d484d;
+  --border: #56635f;
+  --text: #d3c6aa;
+  --muted: #9da9a0;
+  --offline: #e67e80;
+  --accent: #a7c080;
+  --toolbar: #232a2e;
+  --toolbar-border: #56635f;
+}
+:root[data-palette='midnight'] {
+  --bg: #080c18;
+  --surface: #111827;
+  --surface-alt: #1f2937;
+  --border: #374151;
+  --text: #e5e7eb;
+  --muted: #93c5fd;
+  --offline: #fb7185;
+  --accent: #22d3ee;
+  --toolbar: #030712;
+  --toolbar-border: #374151;
+}
+:root[data-palette='matrix'] {
+  --bg: #020403;
+  --surface: #07110b;
+  --surface-alt: #0d1f14;
+  --border: #1f6b3a;
+  --text: #d4ffd9;
+  --muted: #6ee787;
+  --offline: #ff6b6b;
+  --accent: #00ff66;
+  --toolbar: #000000;
+  --toolbar-border: #1f6b3a;
+}
+:root[data-palette='amber'] {
+  --bg: #120c05;
+  --surface: #211407;
+  --surface-alt: #331f09;
+  --border: #7c4a12;
+  --text: #ffe9bd;
+  --muted: #f4b860;
+  --offline: #ff5c3a;
+  --accent: #ffb000;
+  --toolbar: #0b0703;
+  --toolbar-border: #7c4a12;
+}
+:root[data-palette='paper'] {
+  color-scheme: light;
+  --bg: #f7f3e8;
+  --surface: #fffaf0;
+  --surface-alt: #eee7d5;
+  --border: #c8bfa8;
+  --text: #22201b;
+  --muted: #6f6758;
+  --offline: #b42318;
+  --accent: #006d77;
+  --toolbar: #eee7d5;
+  --toolbar-border: #c8bfa8;
+}
+:root[data-palette='contrast'] {
+  --bg: #000000;
+  --surface: #050505;
+  --surface-alt: #111111;
+  --border: #ffffff;
+  --text: #ffffff;
+  --muted: #cfcfcf;
+  --offline: #ff3b30;
+  --accent: #00e5ff;
+  --toolbar: #000000;
+  --toolbar-border: #ffffff;
 }
 body {
   background: var(--bg);
@@ -172,7 +299,7 @@ pre { line-height: 1.4; white-space: pre; color: var(--text); }
     if (paletteSelect) paletteSelect.value = palette;
   });
 
-  setTimeout(() => location.replace({{printf "%q" .RefreshURL}}), refreshMs);
+  setTimeout(() => location.replace({{.RefreshURL}}), refreshMs);
 })();
 </script>
 </head>
@@ -185,11 +312,21 @@ pre { line-height: 1.4; white-space: pre; color: var(--text); }
       <option value="dark">Dark</option>
       <option value="light">Light</option>
     </select>
-    <label for="palette-select">Palette</label>
+    <label for="palette-select">Color</label>
     <select id="palette-select" onchange="window.psstd.switchPalette(this.value)">
       <option value="monochrome">Monochrome</option>
       <option value="solarized">Solarized</option>
       <option value="tango">Tango</option>
+      <option value="nord">Nord</option>
+      <option value="gruvbox">Gruvbox</option>
+      <option value="dracula">Dracula</option>
+      <option value="catppuccin">Catppuccin</option>
+      <option value="everforest">Everforest</option>
+      <option value="midnight">Midnight</option>
+      <option value="matrix">Matrix</option>
+      <option value="amber">Amber</option>
+      <option value="paper">Paper</option>
+      <option value="contrast">High Contrast</option>
     </select>
   </div>
   <div class="group">

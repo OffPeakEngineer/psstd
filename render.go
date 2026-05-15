@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/charmbracelet/lipgloss"
+	"github.com/muesli/termenv"
 	"github.com/robert-nix/ansihtml"
 	"github.com/shirou/gopsutil/v3/cpu"
 	"github.com/shirou/gopsutil/v3/load"
@@ -26,6 +27,10 @@ var templateFS embed.FS
 var pageTmpl = template.Must(
 	template.ParseFS(templateFS, "templates/dashboard.html"),
 )
+
+func init() {
+	lipgloss.SetColorProfile(termenv.ANSI256)
+}
 
 // ── Stats collection ──────────────────────────────────────────────────────────
 
@@ -59,19 +64,57 @@ const barWidth = 20
 
 var (
 	styleGreen  = lipgloss.NewStyle().Foreground(lipgloss.Color("2"))
+	styleCyan   = lipgloss.NewStyle().Foreground(lipgloss.Color("6"))
 	styleBlue   = lipgloss.NewStyle().Foreground(lipgloss.Color("4"))
 	styleYellow = lipgloss.NewStyle().Foreground(lipgloss.Color("3"))
 	styleRed    = lipgloss.NewStyle().Foreground(lipgloss.Color("1"))
 	styleDim    = lipgloss.NewStyle().Foreground(lipgloss.Color("8"))
 )
 
-func pctBar(pct float64, width int, style lipgloss.Style) string {
+type barSegment struct {
+	Until float64
+	Style lipgloss.Style
+}
+
+var (
+	cpuSegments = []barSegment{
+		{Until: 55, Style: styleGreen},
+		{Until: 80, Style: styleYellow},
+		{Until: 100, Style: styleRed},
+	}
+	memSegments = []barSegment{
+		{Until: 35, Style: styleGreen},
+		{Until: 70, Style: styleBlue},
+		{Until: 90, Style: styleYellow},
+		{Until: 100, Style: styleRed},
+	}
+)
+
+func pctBar(pct float64, width int, segments []barSegment) string {
 	filled := int(math.Round(pct / 100.0 * float64(width)))
 	if filled > width {
 		filled = width
 	}
-	return style.Render(strings.Repeat("█", filled)) +
-		styleDim.Render(strings.Repeat("░", width-filled))
+	if filled < 0 {
+		filled = 0
+	}
+
+	var sb strings.Builder
+	for pos := 0; pos < filled; pos++ {
+		style := segmentStyle((float64(pos)+1)/float64(width)*100, segments)
+		sb.WriteString(style.Render("█"))
+	}
+	sb.WriteString(styleDim.Render(strings.Repeat("░", width-filled)))
+	return sb.String()
+}
+
+func segmentStyle(pct float64, segments []barSegment) lipgloss.Style {
+	for _, segment := range segments {
+		if pct <= segment.Until {
+			return segment.Style
+		}
+	}
+	return styleRed
 }
 
 func renderANSI(s NodeStats) string {
@@ -85,14 +128,16 @@ func renderANSI(s NodeStats) string {
 	}
 	sb.WriteString(fmt.Sprintf("%s %s\n", status, s.Name))
 	if offline {
-		sb.WriteString(styleDim.Render("  offline\n"))
+		sb.WriteString(styleDim.Render("  offline"))
+		sb.WriteByte('\n')
 		return sb.String()
 	}
 	sb.WriteString(fmt.Sprintf("  updated %.0fs ago\n", age.Seconds()))
-	sb.WriteString(styleDim.Render(strings.Repeat("─", barWidth+14) + "\n"))
+	sb.WriteString(styleDim.Render(strings.Repeat("─", barWidth+14)))
+	sb.WriteByte('\n')
 
 	for i, pct := range s.CPU {
-		bar := pctBar(pct, barWidth, styleGreen)
+		bar := pctBar(pct, barWidth, cpuSegments)
 		sb.WriteString(fmt.Sprintf("CPU%-2d [%s] %5.1f%%\n", i, bar, pct))
 	}
 
@@ -100,7 +145,7 @@ func renderANSI(s NodeStats) string {
 	if s.MemTotal > 0 {
 		memPct = float64(s.MemUsed) / float64(s.MemTotal) * 100
 	}
-	sb.WriteString(fmt.Sprintf("Mem   [%s] %5.1f%%\n", pctBar(memPct, barWidth, styleBlue), memPct))
+	sb.WriteString(fmt.Sprintf("Mem   [%s] %5.1f%%\n", pctBar(memPct, barWidth, memSegments), memPct))
 	sb.WriteString(fmt.Sprintf("      %s / %s\n", fmtBytes(s.MemUsed), fmtBytes(s.MemTotal)))
 
 	loadStyle := styleGreen
@@ -110,8 +155,8 @@ func renderANSI(s NodeStats) string {
 	if s.Load[0] > 4.0 {
 		loadStyle = styleRed
 	}
-	sb.WriteString(fmt.Sprintf("Load  %s  %.2f  %.2f  %.2f\n",
-		loadStyle.Render("▶"), s.Load[0], s.Load[1], s.Load[2]))
+	sb.WriteString(fmt.Sprintf("Load  %s  %.2f  %s  %.2f\n",
+		loadStyle.Render("▶"), s.Load[0], styleCyan.Render(fmt.Sprintf("%.2f", s.Load[1])), s.Load[2]))
 
 	return sb.String()
 }

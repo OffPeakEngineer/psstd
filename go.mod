@@ -7,6 +7,7 @@ require (
 	github.com/cockroachdb/pebble/v2 v2.1.5
 	github.com/hashicorp/mdns v1.0.6
 	github.com/hashicorp/memberlist v0.5.4
+	github.com/muesli/termenv v0.16.0
 	github.com/robert-nix/ansihtml v1.0.1
 	github.com/shirou/gopsutil/v3 v3.24.5
 )
@@ -52,7 +53,6 @@ require (
 	github.com/mattn/go-runewidth v0.0.23 // indirect
 	github.com/miekg/dns v1.1.72 // indirect
 	github.com/minio/minlz v1.1.1 // indirect
-	github.com/muesli/termenv v0.16.0 // indirect
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/power-devops/perfstat v0.0.0-20240221224432-82ca36839d55 // indirect
