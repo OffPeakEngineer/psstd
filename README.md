@@ -37,6 +37,8 @@ http://localhost:8080
 
 Run the same binary on additional LAN machines and they should discover each other automatically. If the advertised browser URL needs to differ from the listen address, set `PSSTD_ADVERTISE_HTTP`.
 
+If you start `psstd` again while an instance is already running on the machine, the second process does not open another writer on the same store or publish a duplicate node. When the existing `PSSTD_DB` is locked, or the configured gossip port is already bound, it joins as a terminal-only mirror with a temporary database and renders the cluster view in your terminal.
+
 ## Configuration
 
 ```bash
@@ -144,12 +146,6 @@ PSSTD_ADVERTISE_HTTP=https://psstd.example.com/?psstd_node=node-a
 Traefik supports query-param matchers in router rules, so this keeps link clicks and hot-potato refreshes on a single DNS name while still selecting a specific backend. Start from `deploy/traefik/single-host-query.yaml`.
 
 That example also includes a low-priority host-only fallback route. If Traefik sees no matching `psstd_node` value, it sends the request to a shared `psstd-any` service instead of pinning fallback traffic to one node. Keep the `psstd-any` Endpoints list limited to nodes that should receive unrouted fallback traffic.
-
-## Health Check
-
-```bash
-curl http://localhost:8080/healthz
-```
 
 ## Notes
 

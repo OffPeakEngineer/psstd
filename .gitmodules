@@ -1,0 +1,3 @@
+[submodule "patchboard"]
+	path = patchboard
+	url = git@github.com:OffPeakEngineer/patchboard.git

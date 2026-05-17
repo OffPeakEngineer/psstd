@@ -7,6 +7,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -44,9 +45,18 @@ func main() {
 	// ── Local state ─────────────────────────────────────────────────────────
 	db, err := pebble.Open(dbPath, &pebble.Options{})
 	if err != nil {
+		if pebbleLockHeld(err) {
+			log.Printf("psstd already appears to own %s; starting terminal mirror instead", dbPath)
+			runTerminalMirror(hostname, gossipAddr, seeds)
+			return
+		}
 		log.Fatalf("pebble open: %v", err)
 	}
-	defer db.Close()
+	defer func() {
+		if db != nil {
+			db.Close()
+		}
+	}()
 	if err := purgeOfflineDifferentVersion(db, appVersion); err != nil {
 		log.Printf("stale version purge: %v", err)
 	}
@@ -63,6 +73,15 @@ func main() {
 
 	list, err := memberlist.Create(cfg)
 	if err != nil {
+		if addressInUse(err) {
+			if closeErr := db.Close(); closeErr != nil {
+				log.Printf("db close before terminal mirror: %v", closeErr)
+			}
+			db = nil
+			log.Printf("psstd already appears to be listening on %s; starting terminal mirror instead", gossipAddr)
+			runTerminalMirror(hostname, gossipAddr, seeds)
+			return
+		}
 		log.Fatalf("memberlist create: %v", err)
 	}
 	delegate.broadcasts.NumNodes = func() int { return list.NumMembers() }
@@ -92,10 +111,6 @@ func main() {
 	if webEnabled {
 		mux := http.NewServeMux()
 		mux.HandleFunc("/", makeHandler(db, hostname))
-		mux.HandleFunc("/healthz", func(w http.ResponseWriter, _ *http.Request) {
-			w.WriteHeader(200)
-			fmt.Fprintln(w, "ok")
-		})
 		log.Printf("psstd version=%s node=%s http=%s advertise=%s gossip=%s web=true", appVersion, hostname, httpAddr, webURL, gossipAddr)
 		if err := http.ListenAndServe(httpAddr, mux); err != nil {
 			log.Fatalf("http: %v", err)
@@ -104,6 +119,71 @@ func main() {
 		log.Printf("psstd version=%s node=%s gossip=%s web=false", appVersion, hostname, gossipAddr)
 		select {} // block forever
 	}
+}
+
+func pebbleLockHeld(err error) bool {
+	msg := strings.ToLower(err.Error())
+	return strings.Contains(msg, "lock") &&
+		(strings.Contains(msg, "resource temporarily unavailable") ||
+			strings.Contains(msg, "held") ||
+			strings.Contains(msg, "being used") ||
+			strings.Contains(msg, "already in use") ||
+			strings.Contains(msg, "access is denied"))
+}
+
+func addressInUse(err error) bool {
+	msg := strings.ToLower(err.Error())
+	return strings.Contains(msg, "address already in use") ||
+		strings.Contains(msg, "bind: only one usage of each socket address")
+}
+
+func runTerminalMirror(hostname, gossipAddr string, seeds []string) {
+	tmpDir, err := os.MkdirTemp("", "psstd-view-*")
+	if err != nil {
+		log.Fatalf("terminal mirror temp db: %v", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	db, err := pebble.Open(filepath.Join(tmpDir, "data"), &pebble.Options{})
+	if err != nil {
+		log.Fatalf("terminal mirror db: %v", err)
+	}
+	defer db.Close()
+
+	delegate := newKVDelegate(db, appVersion)
+	cfg := memberlist.DefaultLANConfig()
+	cfg.Name = fmt.Sprintf("%s-view-%d", hostname, os.Getpid())
+	cfg.BindAddr = "0.0.0.0"
+	cfg.BindPort = 0
+	cfg.Delegate = delegate
+	cfg.Logger = log.New(os.Stderr, "[memberlist:view] ", log.LstdFlags)
+
+	list, err := memberlist.Create(cfg)
+	if err != nil {
+		log.Fatalf("terminal mirror memberlist: %v", err)
+	}
+	defer list.Shutdown()
+	delegate.broadcasts.NumNodes = func() int { return list.NumMembers() }
+
+	allSeeds := terminalMirrorSeeds(gossipAddr, seeds)
+	if n, err := list.Join(allSeeds); err != nil {
+		log.Printf("terminal mirror join warning (joined %d): %v", n, err)
+	} else {
+		log.Printf("terminal mirror joined cluster, %d peer(s)", n)
+	}
+
+	terminalRenderLoop(db)
+}
+
+func terminalMirrorSeeds(gossipAddr string, seeds []string) []string {
+	out := append([]string{}, seeds...)
+	host, port := splitHostPort(gossipAddr)
+	if host != "" && host != "0.0.0.0" && host != "::" {
+		out = append(out, net.JoinHostPort(host, fmt.Sprintf("%d", port)))
+	}
+	out = append(out, net.JoinHostPort("127.0.0.1", fmt.Sprintf("%d", port)))
+	out = append(out, net.JoinHostPort("localhost", fmt.Sprintf("%d", port)))
+	return append(out, discoverPeers()...)
 }
 
 // ── Stats loop ───────────────────────────────────────────────────────────────
