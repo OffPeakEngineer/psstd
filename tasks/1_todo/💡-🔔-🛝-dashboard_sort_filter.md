@@ -16,7 +16,9 @@ Large clusters benefit from sorting by CPU% or memory to spot hot nodes quickly.
 
 ## Done when
 
-- Dashboard can sort by name, CPU, memory, load, and freshness
+- As long as the JS remains small and inside one template file.
+- Dashboard can sort by any of the metrics populated.
 - Optional filter can hide offline or stale nodes
 - Preferences are stored in the browser, not the server
-- The no-JavaScript server-rendered dashboard remains usable
+
+

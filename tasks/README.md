@@ -42,6 +42,7 @@ status: 0_planning
 type: feature
 priority: normal
 effort: walk
+creator: your-name
 owner: your-name
 created: YYYY-MM-DD
 ---

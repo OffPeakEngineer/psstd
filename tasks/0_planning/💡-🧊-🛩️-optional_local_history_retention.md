@@ -16,7 +16,4 @@ The current model keeps recent gossip state only. Operators sometimes want to kn
 
 ## Done when
 
-- A minimal retention format is proposed, such as compact local hourly snapshots
-- Retention is bounded by count, age, or disk budget
-- No HTTP history API is added unless the project intentionally reopens that surface
-- The feature remains optional and has no dependency on external storage
+- A command line flag --csv="out.csv" file is created, with a header, and simply streams the data it recieves/generates into it.

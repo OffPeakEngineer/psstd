@@ -1,7 +1,7 @@
 ---
 id: task-20260517-health
 title: Distinguish stale nodes from offline nodes
-status: 0_planning
+status: 1_todo
 type: feature
 priority: normal
 effort: walk
@@ -17,6 +17,6 @@ Offline nodes and recently stale nodes can look too similar. Operators should qu
 ## Done when
 
 - Fresh, stale, and offline states have distinct rendering
-- The staleness threshold is either documented as fixed or configurable with a small env var
+- The staleness threshold is controlled by the origin node (each node controls the 'time' it'd like to be known for)
 - Terminal and web views use the same state calculation
 - Existing offline purge/version behavior still works
