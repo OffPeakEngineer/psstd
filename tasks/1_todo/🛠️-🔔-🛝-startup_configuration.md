@@ -20,7 +20,7 @@ psstd is easiest to like when it feels obvious what it is doing: which database 
 - Seed and mDNS discovery results are summarized without noisy repetition
 
 ## Problem 2
-Just a general cleanup
+Just a general cleanup of cli flags and provide some of the basics like help text.
 
 ## Done when
 - Terminal mirror mode should be default mode (-t)
