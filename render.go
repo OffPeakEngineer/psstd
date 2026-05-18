@@ -49,17 +49,22 @@ func collectStats(hostname, webURL, version string, ttl time.Duration) (NodeStat
 	if err != nil {
 		return NodeStats{}, err
 	}
-	return NodeStats{
-		Name:       hostname,
-		Version:    version,
-		WebURL:     webURL,
-		TTLSeconds: int(ttl / time.Second),
-		CPU:        cpuPcts,
-		MemUsed:    vmStat.Used,
-		MemTotal:   vmStat.Total,
-		Load:       [3]float64{loadStat.Load1, loadStat.Load5, loadStat.Load15},
-		UpdatedAt:  time.Now().UnixNano(),
-	}, nil
+	stats := NodeStats{
+		Name:      hostname,
+		Version:   version,
+		WebURL:    webURL,
+		CPU:       cpuPcts,
+		MemUsed:   vmStat.Used,
+		MemTotal:  vmStat.Total,
+		Load:      [3]float64{loadStat.Load1, loadStat.Load5, loadStat.Load15},
+		UpdatedAt: time.Now().UnixNano(),
+	}
+	setNodeStatsTTL(&stats, ttl)
+	return stats, nil
+}
+
+func setNodeStatsTTL(stats *NodeStats, ttl time.Duration) {
+	stats.TTLSeconds = int(ttl / time.Second)
 }
 
 // ── ANSI rendering ────────────────────────────────────────────────────────────

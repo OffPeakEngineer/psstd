@@ -156,11 +156,9 @@ func TestDashboardRendersClusterSummaryAndStateData(t *testing.T) {
 	}
 }
 
-func TestCollectStatsUsesConfiguredTTL(t *testing.T) {
-	stats, err := collectStats("node-a", "http://node-a:8080", "v1", 42*time.Second)
-	if err != nil {
-		t.Fatalf("collectStats: %v", err)
-	}
+func TestSetNodeStatsTTLUsesConfiguredTTL(t *testing.T) {
+	stats := NodeStats{Name: "node-a"}
+	setNodeStatsTTL(&stats, 42*time.Second)
 	if stats.TTLSeconds != 42 {
 		t.Fatalf("ttl seconds = %d, want 42", stats.TTLSeconds)
 	}
