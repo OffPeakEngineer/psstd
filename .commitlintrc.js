@@ -7,7 +7,7 @@ module.exports = {
       'chore',
       'ci',
       'docs',
-      'wiki', 
+      'wiki',
       'feat',
       'fix',
       'perf',
@@ -15,9 +15,9 @@ module.exports = {
       'revert',
       'style',
       'test',
-      'vibe'	    
-      'plan'
-      'vision',
+      'vibe',
+      'plan',
+      'vision'
     ]],
   },
 };
