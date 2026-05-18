@@ -1,7 +1,7 @@
 ---
 id: task-20260517-node-name-override
 title: Add optional node name override
-status: 1_todo
+status: 3_done
 type: feature
 priority: normal
 effort: cake
@@ -21,3 +21,9 @@ psstd uses the OS hostname as the node identity. That is good for zero-config in
 - Node name is validated enough to avoid empty names and confusing whitespace
 - README documents when to use the override
 - Tests cover default hostname and override behavior where practical
+
+## Result
+
+- Implemented `PSSTD_NODE_NAME` for memberlist identity, mDNS registration, stats heartbeat, and terminal mirror fallback naming
+- Added validation and README coverage
+- Added focused unit tests for default, override, and whitespace rejection

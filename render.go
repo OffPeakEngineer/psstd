@@ -21,6 +21,8 @@ import (
 	"github.com/cockroachdb/pebble/v2"
 )
 
+const defaultNodeTTL = 15 * time.Second
+
 //go:embed templates/dashboard.html
 var templateFS embed.FS
 
@@ -34,7 +36,7 @@ func init() {
 
 // ── Stats collection ──────────────────────────────────────────────────────────
 
-func collectStats(hostname, webURL, version string) (NodeStats, error) {
+func collectStats(hostname, webURL, version string, ttl time.Duration) (NodeStats, error) {
 	cpuPcts, err := cpu.Percent(200*time.Millisecond, true)
 	if err != nil {
 		return NodeStats{}, err
@@ -48,14 +50,15 @@ func collectStats(hostname, webURL, version string) (NodeStats, error) {
 		return NodeStats{}, err
 	}
 	return NodeStats{
-		Name:      hostname,
-		Version:   version,
-		WebURL:    webURL,
-		CPU:       cpuPcts,
-		MemUsed:   vmStat.Used,
-		MemTotal:  vmStat.Total,
-		Load:      [3]float64{loadStat.Load1, loadStat.Load5, loadStat.Load15},
-		UpdatedAt: time.Now().UnixNano(),
+		Name:       hostname,
+		Version:    version,
+		WebURL:     webURL,
+		TTLSeconds: int(ttl / time.Second),
+		CPU:        cpuPcts,
+		MemUsed:    vmStat.Used,
+		MemTotal:   vmStat.Total,
+		Load:       [3]float64{loadStat.Load1, loadStat.Load5, loadStat.Load15},
+		UpdatedAt:  time.Now().UnixNano(),
 	}, nil
 }
 
@@ -91,6 +94,46 @@ var (
 	}
 )
 
+type healthState string
+
+const (
+	healthFresh   healthState = "fresh"
+	healthStale   healthState = "stale"
+	healthOffline healthState = "offline"
+)
+
+type nodeHealthInfo struct {
+	State healthState
+	Age   time.Duration
+	TTL   time.Duration
+}
+
+func nodeTTL(s NodeStats) time.Duration {
+	if s.TTLSeconds > 0 {
+		return time.Duration(s.TTLSeconds) * time.Second
+	}
+	return defaultNodeTTL
+}
+
+func nodeHealth(s NodeStats) nodeHealthInfo {
+	ttl := nodeTTL(s)
+	if s.UpdatedAt == 0 {
+		return nodeHealthInfo{State: healthOffline, TTL: ttl}
+	}
+	age := time.Since(time.Unix(0, s.UpdatedAt))
+	if age > ttl {
+		return nodeHealthInfo{State: healthOffline, Age: age, TTL: ttl}
+	}
+	if age > ttl/2 {
+		return nodeHealthInfo{State: healthStale, Age: age, TTL: ttl}
+	}
+	return nodeHealthInfo{State: healthFresh, Age: age, TTL: ttl}
+}
+
+func nodeOnline(s NodeStats) bool {
+	return nodeHealth(s).State != healthOffline
+}
+
 func pctBar(pct float64, width int, segments []barSegment) string {
 	filled := int(math.Round(pct / 100.0 * float64(width)))
 	if filled > width {
@@ -120,20 +163,26 @@ func segmentStyle(pct float64, segments []barSegment) lipgloss.Style {
 
 func renderANSI(s NodeStats) string {
 	var sb strings.Builder
-	age := time.Since(time.Unix(0, s.UpdatedAt))
-	offline := s.UpdatedAt == 0 || age > 15*time.Second
+	health := nodeHealth(s)
 
 	status := styleGreen.Render("●")
-	if offline {
+	if health.State == healthStale {
+		status = styleYellow.Render("●")
+	}
+	if health.State == healthOffline {
 		status = styleRed.Render("●")
 	}
 	sb.WriteString(fmt.Sprintf("%s %s\n", status, s.Name))
-	if offline {
+	if health.State == healthOffline {
 		sb.WriteString(styleDim.Render("  offline"))
 		sb.WriteByte('\n')
 		return sb.String()
 	}
-	sb.WriteString(fmt.Sprintf("  updated %.0fs ago\n", age.Seconds()))
+	if health.State == healthStale {
+		sb.WriteString(fmt.Sprintf("  stale %.0fs ago\n", health.Age.Seconds()))
+	} else {
+		sb.WriteString(fmt.Sprintf("  updated %.0fs ago\n", health.Age.Seconds()))
+	}
 	sb.WriteString(styleDim.Render(strings.Repeat("─", barWidth+14)))
 	sb.WriteByte('\n')
 
@@ -211,8 +260,14 @@ func avgCPU(s NodeStats) float64 {
 	return sum / float64(len(s.CPU))
 }
 
-func nodeOnline(s NodeStats) bool {
-	return s.UpdatedAt != 0 && time.Since(time.Unix(0, s.UpdatedAt)) <= 15*time.Second
+func maxCPU(s NodeStats) float64 {
+	max := 0.0
+	for _, v := range s.CPU {
+		if v > max {
+			max = v
+		}
+	}
+	return max
 }
 
 func computeRefreshIntervalMs(nodes []NodeStats) int {
@@ -263,6 +318,51 @@ func findBestNodeHint(nodes []NodeStats) string {
 		return "no responsive peers yet"
 	}
 	return fmt.Sprintf("lowest-load node: %s (%.0f%% cpu, %.2f load)", best.Name, avgCPU(*best), best.Load[0])
+}
+
+type clusterSummary struct {
+	Fresh   int
+	Stale   int
+	Offline int
+	Hottest string
+	HotCPU  float64
+	HotLoad float64
+	HasHot  bool
+}
+
+func summarizeCluster(nodes []NodeStats) clusterSummary {
+	var summary clusterSummary
+	hotScore := -1.0
+	for _, s := range nodes {
+		switch nodeHealth(s).State {
+		case healthFresh:
+			summary.Fresh++
+		case healthStale:
+			summary.Stale++
+			continue
+		default:
+			summary.Offline++
+			continue
+		}
+		cpu := avgCPU(s)
+		score := cpu + s.Load[0]*10
+		if score > hotScore {
+			hotScore = score
+			summary.Hottest = s.Name
+			summary.HotCPU = cpu
+			summary.HotLoad = s.Load[0]
+			summary.HasHot = true
+		}
+	}
+	return summary
+}
+
+func (s clusterSummary) TerminalHeader() string {
+	hot := "hottest: none"
+	if s.HasHot {
+		hot = fmt.Sprintf("hottest: %s %.0f%% cpu %.2f load", s.Hottest, s.HotCPU, s.HotLoad)
+	}
+	return fmt.Sprintf("online %d - stale %d - offline %d - %s", s.Fresh, s.Stale, s.Offline, hot)
 }
 
 func nodeScore(s NodeStats) float64 {
@@ -360,11 +460,20 @@ func displayQuery(r *http.Request, winW, winH int) url.Values {
 // ── HTTP handler ──────────────────────────────────────────────────────────────
 
 type cellData struct {
-	Name    string
-	URL     string
-	HTML    template.HTML
-	Offline bool
-	Link    bool
+	Name     string
+	URL      string
+	HTML     template.HTML
+	State    healthState
+	CPUAvg   float64
+	CPUMax   float64
+	MemPct   float64
+	MemUsed  uint64
+	MemTotal uint64
+	Load1    float64
+	Load5    float64
+	Load15   float64
+	Age      float64
+	Link     bool
 }
 
 type pageData struct {
@@ -374,6 +483,7 @@ type pageData struct {
 	RefreshLabel string
 	RefreshURL   string
 	BestHint     string
+	Summary      clusterSummary
 }
 
 func makeHandler(db *pebble.DB, selfName string) http.HandlerFunc {
@@ -392,18 +502,31 @@ func makeHandler(db *pebble.DB, selfName string) http.HandlerFunc {
 		cells := make([]cellData, 0, len(nodes))
 		for _, s := range nodes {
 			htmlBytes := ansihtml.ConvertToHTML([]byte(renderANSI(s)))
-			offline := s.UpdatedAt == 0 || time.Since(time.Unix(0, s.UpdatedAt)) > 15*time.Second
+			health := nodeHealth(s)
 			nodeURL := ""
 			if s.WebURL != "" {
 				nodeURL = pageURL(s.WebURL, displayQuery(r, winW, winH))
 			}
+			memPct := 0.0
+			if s.MemTotal > 0 {
+				memPct = float64(s.MemUsed) / float64(s.MemTotal) * 100
+			}
 
 			cells = append(cells, cellData{
-				Name:    s.Name,
-				URL:     nodeURL,
-				HTML:    template.HTML(htmlBytes),
-				Offline: offline,
-				Link:    nodeURL != "",
+				Name:     s.Name,
+				URL:      nodeURL,
+				HTML:     template.HTML(htmlBytes),
+				State:    health.State,
+				CPUAvg:   avgCPU(s),
+				CPUMax:   maxCPU(s),
+				MemPct:   memPct,
+				MemUsed:  s.MemUsed,
+				MemTotal: s.MemTotal,
+				Load1:    s.Load[0],
+				Load5:    s.Load[1],
+				Load15:   s.Load[2],
+				Age:      health.Age.Seconds(),
+				Link:     nodeURL != "",
 			})
 		}
 
@@ -423,6 +546,7 @@ func makeHandler(db *pebble.DB, selfName string) http.HandlerFunc {
 			RefreshLabel: fmt.Sprintf("%.1fs", float64(refreshMs)/1000),
 			RefreshURL:   refreshURL,
 			BestHint:     bestHint,
+			Summary:      summarizeCluster(nodes),
 		}); err != nil {
 			http.Error(w, "template error", 500)
 			return

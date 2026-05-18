@@ -63,7 +63,6 @@ func discoverPeers() []string {
 			continue
 		}
 		peer := fmt.Sprintf("%s:%d", addr.String(), entry.Port)
-		log.Printf("mDNS: discovered peer %s (%s)", entry.Name, peer)
 		peers = append(peers, peer)
 	}
 	return peers

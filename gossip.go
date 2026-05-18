@@ -5,7 +5,6 @@ import (
 	"errors"
 	"log"
 	"sync"
-	"time"
 
 	"github.com/cockroachdb/pebble/v2"
 	"github.com/hashicorp/memberlist"
@@ -14,14 +13,15 @@ import (
 var appVersion = "dev"
 
 type NodeStats struct {
-	Name      string     `json:"name"`
-	Version   string     `json:"version,omitempty"`
-	WebURL    string     `json:"web,omitempty"`
-	CPU       []float64  `json:"cpu"`
-	MemUsed   uint64     `json:"mu"`
-	MemTotal  uint64     `json:"mt"`
-	Load      [3]float64 `json:"ld"`
-	UpdatedAt int64      `json:"ts"` // unix nano, LWW key
+	Name       string     `json:"name"`
+	Version    string     `json:"version,omitempty"`
+	WebURL     string     `json:"web,omitempty"`
+	TTLSeconds int        `json:"ttl,omitempty"`
+	CPU        []float64  `json:"cpu"`
+	MemUsed    uint64     `json:"mu"`
+	MemTotal   uint64     `json:"mt"`
+	Load       [3]float64 `json:"ld"`
+	UpdatedAt  int64      `json:"ts"` // unix nano, LWW key
 }
 
 var errStaleVersion = errors.New("stale version")
@@ -107,7 +107,7 @@ func purgeOfflineDifferentVersion(db *pebble.DB, version string) error {
 }
 
 func nodeRecordOffline(s NodeStats) bool {
-	return s.UpdatedAt == 0 || time.Since(time.Unix(0, s.UpdatedAt)) > 15*time.Second
+	return nodeHealth(s).State == healthOffline
 }
 
 // ── Delegate ──────────────────────────────────────────────────────────────────

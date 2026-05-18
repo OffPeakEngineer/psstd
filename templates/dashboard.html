@@ -15,6 +15,8 @@
   --text: #f7f7f7;
   --muted: #9ca3af;
   --offline: #f97316;
+  --stale: #facc15;
+  --fresh: #22c55e;
   --accent: #60a5fa;
   --toolbar: #111111;
   --toolbar-border: #2a2a2a;
@@ -28,6 +30,8 @@
   --text: #0f172a;
   --muted: #475569;
   --offline: #b91c1c;
+  --stale: #b45309;
+  --fresh: #15803d;
   --accent: #2563eb;
   --toolbar: #eef2ff;
   --toolbar-border: #cbd5e1;
@@ -40,6 +44,8 @@
   --text: #93a1a1;
   --muted: #657b83;
   --offline: #dc322f;
+  --stale: #b58900;
+  --fresh: #859900;
   --accent: #b58900;
   --toolbar: #00212b;
   --toolbar-border: #586e75;
@@ -52,6 +58,8 @@
   --text: #d0d0d0;
   --muted: #94a3b8;
   --offline: #ef4444;
+  --stale: #facc15;
+  --fresh: #8ae234;
   --accent: #ef8b00;
   --toolbar: #20242b;
   --toolbar-border: #4b5263;
@@ -64,6 +72,8 @@
   --text: #eceff4;
   --muted: #d8dee9;
   --offline: #bf616a;
+  --stale: #ebcb8b;
+  --fresh: #a3be8c;
   --accent: #88c0d0;
   --toolbar: #242933;
   --toolbar-border: #4c566a;
@@ -76,6 +86,8 @@
   --text: #ebdbb2;
   --muted: #a89984;
   --offline: #fb4934;
+  --stale: #fabd2f;
+  --fresh: #b8bb26;
   --accent: #fabd2f;
   --toolbar: #1d2021;
   --toolbar-border: #665c54;
@@ -88,6 +100,8 @@
   --text: #f8f8f2;
   --muted: #bd93f9;
   --offline: #ff5555;
+  --stale: #f1fa8c;
+  --fresh: #50fa7b;
   --accent: #50fa7b;
   --toolbar: #21222c;
   --toolbar-border: #6272a4;
@@ -100,6 +114,8 @@
   --text: #cdd6f4;
   --muted: #a6adc8;
   --offline: #f38ba8;
+  --stale: #f9e2af;
+  --fresh: #a6e3a1;
   --accent: #89b4fa;
   --toolbar: #181825;
   --toolbar-border: #585b70;
@@ -112,6 +128,8 @@
   --text: #d3c6aa;
   --muted: #9da9a0;
   --offline: #e67e80;
+  --stale: #dbbc7f;
+  --fresh: #a7c080;
   --accent: #a7c080;
   --toolbar: #232a2e;
   --toolbar-border: #56635f;
@@ -124,6 +142,8 @@
   --text: #e5e7eb;
   --muted: #93c5fd;
   --offline: #fb7185;
+  --stale: #fde047;
+  --fresh: #34d399;
   --accent: #22d3ee;
   --toolbar: #030712;
   --toolbar-border: #374151;
@@ -136,6 +156,8 @@
   --text: #d4ffd9;
   --muted: #6ee787;
   --offline: #ff6b6b;
+  --stale: #faff00;
+  --fresh: #00ff66;
   --accent: #00ff66;
   --toolbar: #000000;
   --toolbar-border: #1f6b3a;
@@ -148,6 +170,8 @@
   --text: #ffe9bd;
   --muted: #f4b860;
   --offline: #ff5c3a;
+  --stale: #ffcf33;
+  --fresh: #83ff66;
   --accent: #ffb000;
   --toolbar: #0b0703;
   --toolbar-border: #7c4a12;
@@ -161,6 +185,8 @@
   --text: #22201b;
   --muted: #6f6758;
   --offline: #b42318;
+  --stale: #a16207;
+  --fresh: #166534;
   --accent: #006d77;
   --toolbar: #eee7d5;
   --toolbar-border: #c8bfa8;
@@ -173,6 +199,8 @@
   --text: #ffffff;
   --muted: #cfcfcf;
   --offline: #ff3b30;
+  --stale: #ffff00;
+  --fresh: #00ff66;
   --accent: #00e5ff;
   --toolbar: #000000;
   --toolbar-border: #ffffff;
@@ -204,6 +232,24 @@ body {
   gap: 10px;
   align-items: center;
   flex-wrap: wrap;
+}
+.summary {
+  color: var(--muted);
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.summary strong { color: var(--text); }
+.summary .fresh { color: var(--fresh); }
+.summary .stale { color: var(--stale); }
+.summary .offline { color: var(--offline); }
+.nodes {
+  width: 100%;
+  display: flex;
+  flex-wrap: wrap;
+  align-content: flex-start;
+  gap: 6px;
 }
 .toolbar label {
   font-size: 0.95rem;
@@ -247,6 +293,7 @@ button:focus, select:focus, .link-button:focus {
 .cell-header a:hover {
   text-decoration: underline;
 }
+.cell.stale { border-color: var(--stale); }
 .cell.offline { opacity: 0.55; border-color: var(--offline); }
 pre { line-height: 1.4; white-space: pre; color: var(--text); }
 </style>
@@ -258,6 +305,9 @@ pre { line-height: 1.4; white-space: pre; color: var(--text); }
   const theme = params.get('theme') || storedTheme;
   const palette = params.get('palette') || storedPalette;
   const refreshMs = {{.RefreshMs}};
+  const storedSort = localStorage.getItem('psstd-sort') || 'name';
+  const storedHideStale = localStorage.getItem('psstd-hide-stale') === 'true';
+  const storedHideOffline = localStorage.getItem('psstd-hide-offline') === 'true';
 
   document.documentElement.dataset.theme = theme;
   document.documentElement.dataset.palette = palette;
@@ -290,14 +340,44 @@ pre { line-height: 1.4; white-space: pre; color: var(--text); }
       document.documentElement.dataset.palette = paletteValue;
       localStorage.setItem('psstd-palette', paletteValue);
       updateQuery('palette', paletteValue);
+    },
+    applyDashboardControls() {
+      const sortSelect = document.getElementById('sort-select');
+      const hideStale = document.getElementById('hide-stale');
+      const hideOffline = document.getElementById('hide-offline');
+      const nodes = document.getElementById('nodes');
+      if (!sortSelect || !hideStale || !hideOffline || !nodes) return;
+
+      localStorage.setItem('psstd-sort', sortSelect.value);
+      localStorage.setItem('psstd-hide-stale', hideStale.checked ? 'true' : 'false');
+      localStorage.setItem('psstd-hide-offline', hideOffline.checked ? 'true' : 'false');
+
+      const cards = Array.from(nodes.querySelectorAll('.cell'));
+      const sortKey = sortSelect.value;
+      cards.sort((a, b) => {
+        if (sortKey === 'name') return a.dataset.name.localeCompare(b.dataset.name);
+        return Number(b.dataset[sortKey] || 0) - Number(a.dataset[sortKey] || 0);
+      });
+      for (const card of cards) {
+        const state = card.dataset.state;
+        card.hidden = (hideStale.checked && state === 'stale') || (hideOffline.checked && state === 'offline');
+        nodes.appendChild(card);
+      }
     }
   };
 
   window.addEventListener('DOMContentLoaded', () => {
     const themeSelect = document.getElementById('theme-select');
     const paletteSelect = document.getElementById('palette-select');
+    const sortSelect = document.getElementById('sort-select');
+    const hideStale = document.getElementById('hide-stale');
+    const hideOffline = document.getElementById('hide-offline');
     if (themeSelect) themeSelect.value = theme;
     if (paletteSelect) paletteSelect.value = palette;
+    if (sortSelect) sortSelect.value = storedSort;
+    if (hideStale) hideStale.checked = storedHideStale;
+    if (hideOffline) hideOffline.checked = storedHideOffline;
+    window.psstd.applyDashboardControls();
   });
 
   setTimeout(() => location.replace({{.RefreshURL}}), refreshMs);
@@ -331,14 +411,38 @@ pre { line-height: 1.4; white-space: pre; color: var(--text); }
     </select>
   </div>
   <div class="group">
-    <span style="color: var(--muted)">Auto-refresh {{.RefreshLabel}} · {{.BestHint}}</span>
+    <label for="sort-select">Sort</label>
+    <select id="sort-select" onchange="window.psstd.applyDashboardControls()">
+      <option value="name">Name</option>
+      <option value="cpuAvg">CPU avg</option>
+      <option value="cpuMax">CPU max</option>
+      <option value="memPct">Memory %</option>
+      <option value="memUsed">Memory used</option>
+      <option value="memTotal">Memory total</option>
+      <option value="load1">Load 1m</option>
+      <option value="load5">Load 5m</option>
+      <option value="load15">Load 15m</option>
+      <option value="age">Age</option>
+    </select>
+    <label><input id="hide-stale" type="checkbox" onchange="window.psstd.applyDashboardControls()"> Hide stale</label>
+    <label><input id="hide-offline" type="checkbox" onchange="window.psstd.applyDashboardControls()"> Hide offline</label>
+  </div>
+  <div class="summary">
+    <strong>Cluster</strong>
+    <span class="fresh">online {{.Summary.Fresh}}</span>
+    <span class="stale">stale {{.Summary.Stale}}</span>
+    <span class="offline">offline {{.Summary.Offline}}</span>
+    {{if .Summary.HasHot}}<span>hottest {{.Summary.Hottest}} {{printf "%.0f" .Summary.HotCPU}}% CPU {{printf "%.2f" .Summary.HotLoad}} load</span>{{else}}<span>hottest none</span>{{end}}
+    <span>Auto-refresh {{.RefreshLabel}} · {{.BestHint}}</span>
   </div>
 </div>
+<div id="nodes" class="nodes">
 {{range .Nodes}}
-<div class="cell{{if .Offline}} offline{{end}}">
+<div class="cell {{.State}}" data-name="{{.Name}}" data-state="{{.State}}" data-cpu-avg="{{printf "%.3f" .CPUAvg}}" data-cpu-max="{{printf "%.3f" .CPUMax}}" data-mem-pct="{{printf "%.3f" .MemPct}}" data-mem-used="{{.MemUsed}}" data-mem-total="{{.MemTotal}}" data-load1="{{printf "%.3f" .Load1}}" data-load5="{{printf "%.3f" .Load5}}" data-load15="{{printf "%.3f" .Load15}}" data-age="{{printf "%.3f" .Age}}">
   <div class="cell-header">{{if .Link}}<a href="{{.URL}}">{{.Name}}</a>{{else}}<span class="node-name">{{.Name}}</span>{{end}}</div>
   <pre>{{.HTML}}</pre>
 </div>
 {{end}}
+</div>
 </body>
 </html>
