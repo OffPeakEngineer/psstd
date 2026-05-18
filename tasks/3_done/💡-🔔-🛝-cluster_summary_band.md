@@ -1,7 +1,7 @@
 ---
 id: task-20260517-cluster-summary-band
 title: Add a compact cluster summary band
-status: 1_todo
+status: 3_done
 type: feature
 priority: normal
 effort: walk
@@ -20,3 +20,9 @@ The dashboard is strongest as an at-a-glance cluster htop. A small summary can a
 - Summary identifies the hottest online node by CPU or load
 - Terminal mirror includes the same counts in its header
 - The summary uses existing node snapshots only and adds no API surface
+
+## Result
+
+- Added a compact web summary with online, stale, offline, and hottest-node details
+- Added the same summary to the terminal mirror header
+- Summary is calculated from existing node snapshots

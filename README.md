@@ -48,8 +48,14 @@ export PSSTD_GOSSIP=":7947"                       # peer sync listen address, de
 export PSSTD_SEEDS="10.0.1.20:7946,10.0.1.21:7946" # explicit peer sync addresses
 export PSSTD_DB="./data"                          # local state directory
 export PSSTD_WEB="true"                           # set false for sync-only nodes
+export PSSTD_NODE_NAME="rack-a-01"                # optional stable node identity override
 ./psstd
 ```
+
+By default, psstd uses the OS hostname as the node identity. Set
+`PSSTD_NODE_NAME` for cloned hosts, containers, or multiple test instances that
+would otherwise publish the same hostname. The override must be non-empty and
+must not contain whitespace.
 
 ## Discovery
 

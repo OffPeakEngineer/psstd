@@ -1,7 +1,7 @@
 ---
 id: task-20260517-cli
 title: Print a clear startup configuration
-status: 1_todo
+status: 3_done
 type: maintenance
 priority: normal
 effort: walk
@@ -19,12 +19,7 @@ psstd is easiest to like when it feels obvious what it is doing: which database 
 - Startup logs show DB path, HTTP listen address, advertised URL, gossip listen address, web enabled state, and version
 - Seed and mDNS discovery results are summarized without noisy repetition
 
-## Problem 2
-Just a general cleanup of cli flags and provide some of the basics like help text.
+## Result
 
-## Done when
-- Terminal mirror mode should be default mode (-t)
-- If a -v flag is provided, then it prints the log instead
-- If a -tv flag is provided, then we print both the terminal rendering and a log stream (similar to how screen does window splits)
-- A -r flag does "read only" and '-t' is still default, and -v and -tv still do the same, just as a read-only 'observer' of the cluster
-- Existing log lines remain useful for troubleshooting
+- Added a concise startup summary including version, node, DB path, web state, HTTP listen address, advertised URL, gossip address, explicit seed count, and mDNS discovery count
+- Split the CLI mode flag cleanup into `task-20260518-cli-mode-flags` for planning

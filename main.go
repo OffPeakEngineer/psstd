@@ -16,18 +16,23 @@ import (
 )
 
 const (
-	envDB      = "PSSTD_DB"
-	envHTTP    = "PSSTD_HTTP"
-	envGossip  = "PSSTD_GOSSIP"
-	envSeeds   = "PSSTD_SEEDS"
-	envHTTPAd  = "PSSTD_ADVERTISE_HTTP"
-	envWeb     = "PSSTD_WEB" // "true" to enable HTTP, default true
-	gossipPort = 7946
-	httpPort   = 8080
+	envDB       = "PSSTD_DB"
+	envHTTP     = "PSSTD_HTTP"
+	envGossip   = "PSSTD_GOSSIP"
+	envSeeds    = "PSSTD_SEEDS"
+	envHTTPAd   = "PSSTD_ADVERTISE_HTTP"
+	envWeb      = "PSSTD_WEB" // "true" to enable HTTP, default true
+	envNodeName = "PSSTD_NODE_NAME"
+	gossipPort  = 7946
+	httpPort    = 8080
 )
 
 func main() {
 	hostname, _ := os.Hostname()
+	nodeName, err := nodeNameFromEnv(hostname)
+	if err != nil {
+		log.Fatalf("node name: %v", err)
+	}
 
 	dbPath := envOr(envDB, "./data")
 	httpAddr := envOr(envHTTP, fmt.Sprintf(":%d", httpPort))
@@ -47,7 +52,7 @@ func main() {
 	if err != nil {
 		if pebbleLockHeld(err) {
 			log.Printf("psstd already appears to own %s; starting terminal mirror instead", dbPath)
-			runTerminalMirror(hostname, gossipAddr, seeds)
+			runTerminalMirror(nodeName, gossipAddr, seeds)
 			return
 		}
 		log.Fatalf("pebble open: %v", err)
@@ -65,7 +70,7 @@ func main() {
 	delegate := newKVDelegate(db, appVersion)
 
 	cfg := memberlist.DefaultLANConfig()
-	cfg.Name = hostname
+	cfg.Name = nodeName
 	cfg.BindAddr, cfg.BindPort = splitHostPort(gossipAddr)
 	cfg.Delegate = delegate
 	cfg.Events = newEventDelegate(db, appVersion)
@@ -79,7 +84,7 @@ func main() {
 			}
 			db = nil
 			log.Printf("psstd already appears to be listening on %s; starting terminal mirror instead", gossipAddr)
-			runTerminalMirror(hostname, gossipAddr, seeds)
+			runTerminalMirror(nodeName, gossipAddr, seeds)
 			return
 		}
 		log.Fatalf("memberlist create: %v", err)
@@ -88,12 +93,23 @@ func main() {
 
 	// ── Discovery ────────────────────────────────────────────────────────────
 	// 1. Register ourselves via mDNS so peers can find us on LAN
-	stopMDNS := registerMDNS(hostname, cfg.BindPort)
+	stopMDNS := registerMDNS(nodeName, cfg.BindPort)
 	defer stopMDNS()
 
 	// 2. Scan for existing peers (mDNS + any explicit seeds)
 	discovered := discoverPeers()
 	allSeeds := append(seeds, discovered...)
+	logStartupConfig(startupConfig{
+		NodeName:   nodeName,
+		DBPath:     dbPath,
+		HTTPAddr:   httpAddr,
+		WebURL:     webURL,
+		GossipAddr: gossipAddr,
+		WebEnabled: webEnabled,
+		Version:    appVersion,
+		SeedCount:  len(seeds),
+		MDNSCount:  len(discovered),
+	})
 	if len(allSeeds) > 0 {
 		if n, err := list.Join(allSeeds); err != nil {
 			log.Printf("join warning (joined %d): %v", n, err)
@@ -105,20 +121,35 @@ func main() {
 	}
 
 	// ── Stats heartbeat ─────────────────────────────────────────────────────
-	go statsLoop(hostname, webURL, appVersion, db, delegate)
+	go statsLoop(nodeName, webURL, appVersion, db, delegate)
 
 	// ── HTTP ─────────────────────────────────────────────────────────────────
 	if webEnabled {
 		mux := http.NewServeMux()
-		mux.HandleFunc("/", makeHandler(db, hostname))
-		log.Printf("psstd version=%s node=%s http=%s advertise=%s gossip=%s web=true", appVersion, hostname, httpAddr, webURL, gossipAddr)
+		mux.HandleFunc("/", makeHandler(db, nodeName))
 		if err := http.ListenAndServe(httpAddr, mux); err != nil {
 			log.Fatalf("http: %v", err)
 		}
 	} else {
-		log.Printf("psstd version=%s node=%s gossip=%s web=false", appVersion, hostname, gossipAddr)
 		select {} // block forever
 	}
+}
+
+type startupConfig struct {
+	NodeName   string
+	DBPath     string
+	HTTPAddr   string
+	WebURL     string
+	GossipAddr string
+	WebEnabled bool
+	Version    string
+	SeedCount  int
+	MDNSCount  int
+}
+
+func logStartupConfig(cfg startupConfig) {
+	log.Printf("psstd startup: version=%s node=%s db=%s web=%t http=%s advertise=%s gossip=%s seeds=%d mdns=%d",
+		cfg.Version, cfg.NodeName, cfg.DBPath, cfg.WebEnabled, cfg.HTTPAddr, cfg.WebURL, cfg.GossipAddr, cfg.SeedCount, cfg.MDNSCount)
 }
 
 func pebbleLockHeld(err error) bool {
@@ -253,6 +284,23 @@ func envOr(key, def string) string {
 		return v
 	}
 	return def
+}
+
+func nodeNameFromEnv(hostname string) (string, error) {
+	override, ok := os.LookupEnv(envNodeName)
+	if !ok || override == "" {
+		if strings.TrimSpace(hostname) == "" {
+			return "", fmt.Errorf("hostname is empty; set %s", envNodeName)
+		}
+		return hostname, nil
+	}
+	if strings.TrimSpace(override) != override || override == "" {
+		return "", fmt.Errorf("%s must not be empty or have leading/trailing whitespace", envNodeName)
+	}
+	if strings.ContainsAny(override, " \t\r\n") {
+		return "", fmt.Errorf("%s must not contain whitespace", envNodeName)
+	}
+	return override, nil
 }
 
 func splitCSV(s string) []string {

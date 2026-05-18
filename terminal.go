@@ -34,7 +34,9 @@ func renderTerminalSnapshot(db *pebble.DB) {
 		return
 	}
 
-	fmt.Printf("psstd terminal mirror - %d node(s) - %s\n\n", len(nodes), time.Now().Format(time.RFC3339))
+	fmt.Printf("psstd terminal mirror - %d node(s) - %s\n", len(nodes), time.Now().Format(time.RFC3339))
+	fmt.Println(summarizeCluster(nodes).TerminalHeader())
+	fmt.Println()
 	fmt.Print(renderTerminalNodes(nodes))
 }
 
