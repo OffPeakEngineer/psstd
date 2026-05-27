@@ -1,4 +1,4 @@
-module github.com/OffPeakEngineer/psstd
+module github.com/OffPeakEngineer/pulsed
 
 go 1.25.0
 

@@ -12,7 +12,7 @@ creator: "copilot"
 
 ## Problem
 
-Some operators may run independent psstd clusters for environments like dev, staging, and prod. Switching between browser tabs is tedious, but adding cross-cluster behavior can easily make psstd feel like a control plane instead of a simple cluster view.
+Some operators may run independent pulsed clusters for environments like dev, staging, and prod. Switching between browser tabs is tedious, but adding cross-cluster behavior can easily make pulsed feel like a control plane instead of a simple cluster view.
 
 ## Done when
 

@@ -1,19 +1,19 @@
 [Unit]
-Description=psstd resilient cluster htop
-Documentation=https://github.com/OffPeakEngineer/psstd
+Description=pulsed resilient cluster htop
+Documentation=https://github.com/OffPeakEngineer/pulsed
 After=network-online.target
 Wants=network-online.target
 
 [Service]
 Type=simple
-User=psstd
-Group=psstd
-EnvironmentFile=-/etc/psstd/psstd.env
-ExecStart=/usr/local/bin/psstd
+User=pulsed
+Group=pulsed
+EnvironmentFile=-/etc/pulsed/pulsed.env
+ExecStart=/usr/local/bin/pulsed
 Restart=always
 RestartSec=3
-StateDirectory=psstd
-WorkingDirectory=/var/lib/psstd
+StateDirectory=pulsed
+WorkingDirectory=/var/lib/pulsed
 NoNewPrivileges=true
 
 [Install]

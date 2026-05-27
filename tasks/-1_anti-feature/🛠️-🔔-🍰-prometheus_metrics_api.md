@@ -12,7 +12,7 @@ creator: "copilot"
 
 ## Problem
 
-External monitoring tools can already monitor hosts directly, and psstd recently removed superfluous HTTP endpoints. A Prometheus-style export may be useful later, but adding `/metrics` now would expand the public surface area again.
+External monitoring tools can already monitor hosts directly, and pulsed recently removed superfluous HTTP endpoints. A Prometheus-style export may be useful later, but adding `/metrics` now would expand the public surface area again.
 
 ## Done when
 

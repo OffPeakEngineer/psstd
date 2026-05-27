@@ -16,7 +16,7 @@ forked_from: task-20260517-cli
 Startup logging now prints a concise configuration summary and quiets repeated
 mDNS discovery lines, but the actual join outcome is still reported separately.
 The original operator-facing problem asks for the startup summary to make it
-obvious whether psstd joined peers or is running solo.
+obvious whether pulsed joined peers or is running solo.
 
 ## Done when
 

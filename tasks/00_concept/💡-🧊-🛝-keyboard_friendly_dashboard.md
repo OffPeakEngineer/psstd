@@ -12,7 +12,7 @@ created: 2026-05-17
 
 ## Problem
 
-psstd is a monitoring surface people may leave open, but they may also need to quickly inspect it without a mouse. Small keyboard and focus improvements can make the dashboard feel more deliberate without adding major UI.
+pulsed is a monitoring surface people may leave open, but they may also need to quickly inspect it without a mouse. Small keyboard and focus improvements can make the dashboard feel more deliberate without adding major UI.
 
 ## Done when
 

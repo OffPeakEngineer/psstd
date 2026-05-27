@@ -4,8 +4,8 @@ COPY go.mod go.sum ./
 RUN go mod download
 COPY . .
 ARG VERSION=dev
-RUN CGO_ENABLED=0 go build -ldflags="-X main.appVersion=${VERSION}" -o /psstd .
+RUN CGO_ENABLED=0 go build -ldflags="-X main.appVersion=${VERSION}" -o /pulsed .
 
 FROM scratch
-COPY --from=build /psstd /psstd
-ENTRYPOINT ["/psstd"]
+COPY --from=build /pulsed /pulsed
+ENTRYPOINT ["/pulsed"]

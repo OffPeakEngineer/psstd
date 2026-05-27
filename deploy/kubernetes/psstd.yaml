@@ -1,13 +1,13 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: psstd
+  name: pulsed
   labels:
-    app: psstd
+    app: pulsed
 spec:
   clusterIP: None
   selector:
-    app: psstd
+    app: pulsed
   ports:
     - name: http
       port: 8080
@@ -19,38 +19,38 @@ spec:
 apiVersion: apps/v1
 kind: DaemonSet
 metadata:
-  name: psstd
+  name: pulsed
   labels:
-    app: psstd
+    app: pulsed
 spec:
   selector:
     matchLabels:
-      app: psstd
+      app: pulsed
   template:
     metadata:
       labels:
-        app: psstd
+        app: pulsed
     spec:
       hostNetwork: true
       dnsPolicy: ClusterFirstWithHostNet
       containers:
-        - name: psstd
-          image: ghcr.io/offpeakengineer/psstd:latest
+        - name: pulsed
+          image: ghcr.io/offpeakengineer/pulsed:latest
           imagePullPolicy: IfNotPresent
           env:
             - name: NODE_IP
               valueFrom:
                 fieldRef:
                   fieldPath: status.hostIP
-            - name: PSSTD_HTTP
+            - name: PULSED_HTTP
               value: ":8080"
-            - name: PSSTD_ADVERTISE_HTTP
+            - name: PULSED_ADVERTISE_HTTP
               value: "http://$(NODE_IP):8080"
-            - name: PSSTD_GOSSIP
+            - name: PULSED_GOSSIP
               value: ":7946"
-            - name: PSSTD_SEEDS
-              value: "psstd.default.svc.cluster.local:7946"
-            - name: PSSTD_DB
+            - name: PULSED_SEEDS
+              value: "pulsed.default.svc.cluster.local:7946"
+            - name: PULSED_DB
               value: "/data"
           ports:
             - name: http

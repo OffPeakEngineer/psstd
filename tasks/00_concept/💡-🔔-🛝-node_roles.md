@@ -16,7 +16,7 @@ Large heterogeneous clusters are harder to scan when every host looks equivalent
 
 ## Done when
 
-- Optional `PSSTD_ROLE` environment variable is read, such as `db`, `worker`, or `cache`
+- Optional `PULSED_ROLE` environment variable is read, such as `db`, `worker`, or `cache`
 - Role travels with gossip broadcasts as part of `NodeStats`
 - Dashboard and terminal views render the role compactly
 - Empty role preserves the current display

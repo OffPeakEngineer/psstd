@@ -12,11 +12,11 @@ created: 2026-05-17
 
 ## Problem
 
-psstd uses the OS hostname as the node identity. That is good for zero-config installs, but cloned hosts, containers, or multiple test instances can collide and overwrite each other in the ledger.
+pulsed uses the OS hostname as the node identity. That is good for zero-config installs, but cloned hosts, containers, or multiple test instances can collide and overwrite each other in the ledger.
 
 ## Done when
 
-- Optional `PSSTD_NODE_NAME` overrides `os.Hostname()`
+- Optional `PULSED_NODE_NAME` overrides `os.Hostname()`
 - Empty override preserves current behavior
 - Node name is validated enough to avoid empty names and confusing whitespace
 - README documents when to use the override
@@ -24,6 +24,6 @@ psstd uses the OS hostname as the node identity. That is good for zero-config in
 
 ## Result
 
-- Implemented `PSSTD_NODE_NAME` for memberlist identity, mDNS registration, stats heartbeat, and terminal mirror fallback naming
+- Implemented `PULSED_NODE_NAME` for memberlist identity, mDNS registration, stats heartbeat, and terminal mirror fallback naming
 - Added validation and README coverage
 - Added focused unit tests for default, override, and whitespace rejection

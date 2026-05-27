@@ -1,20 +1,20 @@
-# Template for exposing several bare-metal psstd nodes behind one hostname.
+# Template for exposing several bare-metal pulsed nodes behind one hostname.
 #
 # Browser URLs look like:
-# - https://psstd.example.com/?psstd_node=node-a
-# - https://psstd.example.com/?psstd_node=node-b
+# - https://pulsed.example.com/?pulsed_node=node-a
+# - https://pulsed.example.com/?pulsed_node=node-b
 #
 # On each bare-metal node, advertise the shared host with that node's query key:
-# PSSTD_ADVERTISE_HTTP=https://psstd.example.com/?psstd_node=node-a
+# PULSED_ADVERTISE_HTTP=https://pulsed.example.com/?pulsed_node=node-a
 #
 # Traefik routes by query parameter before forwarding the request, so hot-potato
 # refreshes and peer links still land on the intended node without per-node DNS.
-# Requests without a matching psstd_node value fall back to psstd-any. Keep that
+# Requests without a matching pulsed_node value fall back to pulsed-any. Keep that
 # Endpoints list limited to nodes that should receive unrouted fallback traffic.
 apiVersion: v1
 kind: Service
 metadata:
-  name: psstd-node-a
+  name: pulsed-node-a
   namespace: default
 spec:
   ports:
@@ -25,7 +25,7 @@ spec:
 apiVersion: v1
 kind: Endpoints
 metadata:
-  name: psstd-node-a
+  name: pulsed-node-a
   namespace: default
 subsets:
   - addresses:
@@ -37,7 +37,7 @@ subsets:
 apiVersion: v1
 kind: Service
 metadata:
-  name: psstd-node-b
+  name: pulsed-node-b
   namespace: default
 spec:
   ports:
@@ -48,7 +48,7 @@ spec:
 apiVersion: v1
 kind: Endpoints
 metadata:
-  name: psstd-node-b
+  name: pulsed-node-b
   namespace: default
 subsets:
   - addresses:
@@ -60,7 +60,7 @@ subsets:
 apiVersion: v1
 kind: Service
 metadata:
-  name: psstd-any
+  name: pulsed-any
   namespace: default
 spec:
   ports:
@@ -71,7 +71,7 @@ spec:
 apiVersion: v1
 kind: Endpoints
 metadata:
-  name: psstd-any
+  name: pulsed-any
   namespace: default
 subsets:
   - addresses:
@@ -84,28 +84,28 @@ subsets:
 apiVersion: traefik.io/v1alpha1
 kind: IngressRoute
 metadata:
-  name: psstd
+  name: pulsed
   namespace: default
 spec:
   entryPoints:
     - websecure
   routes:
-    - match: Host(`psstd.example.com`) && Query(`psstd_node`, `node-a`)
+    - match: Host(`pulsed.example.com`) && Query(`pulsed_node`, `node-a`)
       kind: Rule
       priority: 100
       services:
-        - name: psstd-node-a
+        - name: pulsed-node-a
           port: 8080
-    - match: Host(`psstd.example.com`) && Query(`psstd_node`, `node-b`)
+    - match: Host(`pulsed.example.com`) && Query(`pulsed_node`, `node-b`)
       kind: Rule
       priority: 100
       services:
-        - name: psstd-node-b
+        - name: pulsed-node-b
           port: 8080
-    - match: Host(`psstd.example.com`)
+    - match: Host(`pulsed.example.com`)
       kind: Rule
       priority: 1
       services:
-        - name: psstd-any
+        - name: pulsed-any
           port: 8080
   tls: {}

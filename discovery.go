@@ -9,13 +9,13 @@ import (
 	"github.com/hashicorp/mdns"
 )
 
-const mdnsService = "_psstd._tcp"
+const mdnsService = "_pulsed._tcp"
 const mdnsDomain = "local."
 
 // registerMDNS advertises this node on the LAN via mDNS.
 // Returns a stop func.
 func registerMDNS(hostname string, port int) func() {
-	info := []string{"psstd node"}
+	info := []string{"pulsed node"}
 	svc, err := mdns.NewMDNSService(hostname, mdnsService, mdnsDomain, "", port, nil, info)
 	if err != nil {
 		log.Printf("mDNS register error: %v", err)
@@ -30,7 +30,7 @@ func registerMDNS(hostname string, port int) func() {
 	return func() { server.Shutdown() }
 }
 
-// discoverPeers scans mDNS for other psstd nodes and returns their gossip addresses.
+// discoverPeers scans mDNS for other pulsed nodes and returns their gossip addresses.
 func discoverPeers() []string {
 	entries := make(chan *mdns.ServiceEntry, 16)
 	var peers []string

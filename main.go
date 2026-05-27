@@ -21,14 +21,14 @@ type cliOptions struct {
 }
 
 const (
-	envDB       = "PSSTD_DB"
-	envHTTP     = "PSSTD_HTTP"
-	envGossip   = "PSSTD_GOSSIP"
-	envSeeds    = "PSSTD_SEEDS"
-	envHTTPAd   = "PSSTD_ADVERTISE_HTTP"
-	envWeb      = "PSSTD_WEB" // "true" to enable HTTP, default true
-	envNodeName = "PSSTD_NODE_NAME"
-	envNodeTTL  = "PSSTD_NODE_TTL"
+	envDB       = "PULSED_DB"
+	envHTTP     = "PULSED_HTTP"
+	envGossip   = "PULSED_GOSSIP"
+	envSeeds    = "PULSED_SEEDS"
+	envHTTPAd   = "PULSED_ADVERTISE_HTTP"
+	envWeb      = "PULSED_WEB" // "true" to enable HTTP, default true
+	envNodeName = "PULSED_NODE_NAME"
+	envNodeTTL  = "PULSED_NODE_TTL"
 	gossipPort  = 7946
 	httpPort    = 8080
 )
@@ -62,7 +62,7 @@ func main() {
 	db, err := pebble.Open(dbPath, &pebble.Options{})
 	if err != nil {
 		if pebbleLockHeld(err) {
-			log.Printf("psstd already appears to own %s; starting terminal mirror instead", dbPath)
+			log.Printf("pulsed already appears to own %s; starting terminal mirror instead", dbPath)
 			runTerminalMirror(nodeName, gossipAddr, seeds, opts.List)
 			return
 		}
@@ -94,7 +94,7 @@ func main() {
 				log.Printf("db close before terminal mirror: %v", closeErr)
 			}
 			db = nil
-			log.Printf("psstd already appears to be listening on %s; starting terminal mirror instead", gossipAddr)
+			log.Printf("pulsed already appears to be listening on %s; starting terminal mirror instead", gossipAddr)
 			runTerminalMirror(nodeName, gossipAddr, seeds, opts.List)
 			return
 		}
@@ -146,7 +146,7 @@ func main() {
 }
 
 func parseCLI(args []string) cliOptions {
-	fs := flag.NewFlagSet("psstd", flag.ExitOnError)
+	fs := flag.NewFlagSet("pulsed", flag.ExitOnError)
 	fs.SetOutput(os.Stderr)
 	var opts cliOptions
 	fs.BoolVar(&opts.List, "l", false, "render terminal mirror as a vertical node list")
@@ -181,7 +181,7 @@ func startupSummary(cfg startupConfig) string {
 	} else if cfg.JoinedPeers > 0 {
 		join = fmt.Sprintf("joined=%d", cfg.JoinedPeers)
 	}
-	return fmt.Sprintf("psstd startup: version=%s node=%s db=%s web=%t http=%s advertise=%s gossip=%s ttl=%s seeds=%d mdns=%d join=%s",
+	return fmt.Sprintf("pulsed startup: version=%s node=%s db=%s web=%t http=%s advertise=%s gossip=%s ttl=%s seeds=%d mdns=%d join=%s",
 		cfg.Version, cfg.NodeName, cfg.DBPath, cfg.WebEnabled, cfg.HTTPAddr, cfg.WebURL, cfg.GossipAddr, cfg.NodeTTL, cfg.SeedCount, cfg.MDNSCount, join)
 }
 
@@ -202,7 +202,7 @@ func addressInUse(err error) bool {
 }
 
 func runTerminalMirror(hostname, gossipAddr string, seeds []string, listMode bool) {
-	tmpDir, err := os.MkdirTemp("", "psstd-view-*")
+	tmpDir, err := os.MkdirTemp("", "pulsed-view-*")
 	if err != nil {
 		log.Fatalf("terminal mirror temp db: %v", err)
 	}
@@ -281,10 +281,10 @@ func newEventDelegate(db *pebble.DB, version string) *eventDelegate {
 }
 
 func (e *eventDelegate) NotifyJoin(n *memberlist.Node) {
-	log.Printf("[psstd] node joined: %s", n.Name)
+	log.Printf("[pulsed] node joined: %s", n.Name)
 }
 func (e *eventDelegate) NotifyLeave(n *memberlist.Node) {
-	log.Printf("[psstd] node left: %s", n.Name)
+	log.Printf("[pulsed] node left: %s", n.Name)
 	markOffline(e.db, n.Name, e.version)
 }
 func (e *eventDelegate) NotifyUpdate(n *memberlist.Node) {}

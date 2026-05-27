@@ -3,38 +3,38 @@
 <plist version="1.0">
 <dict>
   <key>Label</key>
-  <string>com.offpeakengineer.psstd</string>
+  <string>com.offpeakengineer.pulsed</string>
 
   <key>ProgramArguments</key>
   <array>
-    <string>/usr/local/bin/psstd</string>
+    <string>/usr/local/bin/pulsed</string>
   </array>
 
   <key>EnvironmentVariables</key>
   <dict>
-    <key>PSSTD_HTTP</key>
+    <key>PULSED_HTTP</key>
     <string>:8080</string>
-    <key>PSSTD_ADVERTISE_HTTP</key>
+    <key>PULSED_ADVERTISE_HTTP</key>
     <string>http://CHANGE_ME:8080</string>
-    <key>PSSTD_GOSSIP</key>
+    <key>PULSED_GOSSIP</key>
     <string>:7946</string>
-    <key>PSSTD_SEEDS</key>
+    <key>PULSED_SEEDS</key>
     <string></string>
-    <key>PSSTD_DB</key>
-    <string>/usr/local/var/psstd</string>
-    <key>PSSTD_WEB</key>
+    <key>PULSED_DB</key>
+    <string>/usr/local/var/pulsed</string>
+    <key>PULSED_WEB</key>
     <string>true</string>
   </dict>
 
   <key>WorkingDirectory</key>
-  <string>/usr/local/var/psstd</string>
+  <string>/usr/local/var/pulsed</string>
   <key>RunAtLoad</key>
   <true/>
   <key>KeepAlive</key>
   <true/>
   <key>StandardOutPath</key>
-  <string>/usr/local/var/log/psstd.log</string>
+  <string>/usr/local/var/log/pulsed.log</string>
   <key>StandardErrorPath</key>
-  <string>/usr/local/var/log/psstd.err.log</string>
+  <string>/usr/local/var/log/pulsed.err.log</string>
 </dict>
 </plist>

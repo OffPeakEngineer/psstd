@@ -22,7 +22,7 @@ func TestDashboardDoesNotLinkNodesWithoutWebURL(t *testing.T) {
 		{
 			Name:      "web-node",
 			Version:   appVersion,
-			WebURL:    "https://psstd.example.com/?psstd_node=web-node",
+			WebURL:    "https://pulsed.example.com/?pulsed_node=web-node",
 			UpdatedAt: now,
 			CPU:       []float64{20},
 			MemTotal:  100,

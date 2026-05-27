@@ -1,3 +1,3 @@
-{{- define "psstd.fullname" -}}psstd{{- end }}
-{{- define "psstd.labels" -}}app.kubernetes.io/name: psstd{{- end }}
-{{- define "psstd.selectorLabels" -}}app.kubernetes.io/name: psstd{{- end }}
+{{- define "pulsed.fullname" -}}pulsed{{- end }}
+{{- define "pulsed.labels" -}}app.kubernetes.io/name: pulsed{{- end }}
+{{- define "pulsed.selectorLabels" -}}app.kubernetes.io/name: pulsed{{- end }}

@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>psstd</title>
+<title>pulsed</title>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 :root {
@@ -300,19 +300,19 @@ pre { line-height: 1.4; white-space: pre; color: var(--text); }
 <script>
 (function() {
   const params = new URLSearchParams(location.search);
-  const storedTheme = localStorage.getItem('psstd-theme') || 'dark';
-  const storedPalette = localStorage.getItem('psstd-palette') || 'monochrome';
+  const storedTheme = localStorage.getItem('pulsed-theme') || 'dark';
+  const storedPalette = localStorage.getItem('pulsed-palette') || 'monochrome';
   const theme = params.get('theme') || storedTheme;
   const palette = params.get('palette') || storedPalette;
   const refreshMs = {{.RefreshMs}};
-  const storedSort = localStorage.getItem('psstd-sort') || 'name';
-  const storedHideStale = localStorage.getItem('psstd-hide-stale') === 'true';
-  const storedHideOffline = localStorage.getItem('psstd-hide-offline') === 'true';
+  const storedSort = localStorage.getItem('pulsed-sort') || 'name';
+  const storedHideStale = localStorage.getItem('pulsed-hide-stale') === 'true';
+  const storedHideOffline = localStorage.getItem('pulsed-hide-offline') === 'true';
 
   document.documentElement.dataset.theme = theme;
   document.documentElement.dataset.palette = palette;
-  localStorage.setItem('psstd-theme', theme);
-  localStorage.setItem('psstd-palette', palette);
+  localStorage.setItem('pulsed-theme', theme);
+  localStorage.setItem('pulsed-palette', palette);
 
   if (!params.has('w') || !params.has('h') || params.get('theme') !== theme || params.get('palette') !== palette) {
     params.set('w', window.innerWidth);
@@ -330,15 +330,15 @@ pre { line-height: 1.4; white-space: pre; color: var(--text); }
     location.replace('?' + params.toString());
   }
 
-  window.psstd = {
+  window.pulsed = {
     switchTheme(themeValue) {
       document.documentElement.dataset.theme = themeValue;
-      localStorage.setItem('psstd-theme', themeValue);
+      localStorage.setItem('pulsed-theme', themeValue);
       updateQuery('theme', themeValue);
     },
     switchPalette(paletteValue) {
       document.documentElement.dataset.palette = paletteValue;
-      localStorage.setItem('psstd-palette', paletteValue);
+      localStorage.setItem('pulsed-palette', paletteValue);
       updateQuery('palette', paletteValue);
     },
     applyDashboardControls() {
@@ -348,9 +348,9 @@ pre { line-height: 1.4; white-space: pre; color: var(--text); }
       const nodes = document.getElementById('nodes');
       if (!sortSelect || !hideStale || !hideOffline || !nodes) return;
 
-      localStorage.setItem('psstd-sort', sortSelect.value);
-      localStorage.setItem('psstd-hide-stale', hideStale.checked ? 'true' : 'false');
-      localStorage.setItem('psstd-hide-offline', hideOffline.checked ? 'true' : 'false');
+      localStorage.setItem('pulsed-sort', sortSelect.value);
+      localStorage.setItem('pulsed-hide-stale', hideStale.checked ? 'true' : 'false');
+      localStorage.setItem('pulsed-hide-offline', hideOffline.checked ? 'true' : 'false');
 
       const cards = Array.from(nodes.querySelectorAll('.cell'));
       const sortKey = sortSelect.value;
@@ -377,7 +377,7 @@ pre { line-height: 1.4; white-space: pre; color: var(--text); }
     if (sortSelect) sortSelect.value = storedSort;
     if (hideStale) hideStale.checked = storedHideStale;
     if (hideOffline) hideOffline.checked = storedHideOffline;
-    window.psstd.applyDashboardControls();
+    window.pulsed.applyDashboardControls();
   });
 
   setTimeout(() => location.replace({{.RefreshURL}}), refreshMs);
@@ -389,12 +389,12 @@ pre { line-height: 1.4; white-space: pre; color: var(--text); }
   <div class="group">
     <strong style="color: var(--text)">Display</strong>
     <label for="theme-select">Theme</label>
-    <select id="theme-select" onchange="window.psstd.switchTheme(this.value)">
+    <select id="theme-select" onchange="window.pulsed.switchTheme(this.value)">
       <option value="dark">Dark</option>
       <option value="light">Light</option>
     </select>
     <label for="palette-select">Color</label>
-    <select id="palette-select" onchange="window.psstd.switchPalette(this.value)">
+    <select id="palette-select" onchange="window.pulsed.switchPalette(this.value)">
       <option value="monochrome">Monochrome</option>
       <option value="solarized">Solarized</option>
       <option value="tango">Tango</option>
@@ -412,7 +412,7 @@ pre { line-height: 1.4; white-space: pre; color: var(--text); }
   </div>
   <div class="group">
     <label for="sort-select">Sort</label>
-    <select id="sort-select" onchange="window.psstd.applyDashboardControls()">
+    <select id="sort-select" onchange="window.pulsed.applyDashboardControls()">
       <option value="name">Name</option>
       <option value="cpuAvg">CPU avg</option>
       <option value="cpuMax">CPU max</option>
@@ -424,8 +424,8 @@ pre { line-height: 1.4; white-space: pre; color: var(--text); }
       <option value="load15">Load 15m</option>
       <option value="age">Age</option>
     </select>
-    <label><input id="hide-stale" type="checkbox" onchange="window.psstd.applyDashboardControls()"> Hide stale</label>
-    <label><input id="hide-offline" type="checkbox" onchange="window.psstd.applyDashboardControls()"> Hide offline</label>
+    <label><input id="hide-stale" type="checkbox" onchange="window.pulsed.applyDashboardControls()"> Hide stale</label>
+    <label><input id="hide-offline" type="checkbox" onchange="window.pulsed.applyDashboardControls()"> Hide offline</label>
   </div>
   <div class="summary">
     <strong>Cluster</strong>

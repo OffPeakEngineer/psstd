@@ -14,7 +14,7 @@ Move a task file between folders to change its state. Git history is the audit
 trail.
 
 `-1_anti-feature` is for explicit non-goals: ideas that may sound useful but
-would make psstd heavier, riskier, or less focused. Keep these as reference
+would make pulsed heavier, riskier, or less focused. Keep these as reference
 points so future planning can explain why the project is not taking that path.
 Anti-feature files still use the same filename tags and frontmatter shape.
 

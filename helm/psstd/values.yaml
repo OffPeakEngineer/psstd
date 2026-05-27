@@ -1,5 +1,5 @@
 image:
-  repository: ghcr.io/yourname/psstd
+  repository: ghcr.io/yourname/pulsed
   tag: latest
   pullPolicy: IfNotPresent
 
@@ -11,7 +11,7 @@ gossip:
   port: 7946
 
 db:
-  path: /var/lib/psstd/state
+  path: /var/lib/pulsed/state
 
 resources:
   limits:

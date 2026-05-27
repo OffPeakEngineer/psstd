@@ -14,7 +14,7 @@ forked_from: task-20260517-health
 ## Problem
 
 Fresh, stale, and offline rendering now uses a TTL published by the origin node,
-but the origin currently only publishes psstd's built-in default. Operators
+but the origin currently only publishes pulsed's built-in default. Operators
 still cannot tune how long a node wants its last heartbeat to be considered
 fresh or stale.
 
@@ -28,7 +28,7 @@ fresh or stale.
 
 ## Result
 
-- Added `PSSTD_NODE_TTL` duration parsing with a `15s` default and clear invalid-value failures
+- Added `PULSED_NODE_TTL` duration parsing with a `15s` default and clear invalid-value failures
 - Published the configured TTL in each node heartbeat
 - Documented TTL tuning in README
 - Added unit coverage for default, configured, invalid, and heartbeat-published TTL behavior

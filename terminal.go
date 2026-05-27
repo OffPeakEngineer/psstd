@@ -43,12 +43,12 @@ func renderTerminalSnapshot(db *pebble.DB, listMode bool) {
 
 	fmt.Print("\033[H\033[2J")
 	if len(nodes) == 0 {
-		fmt.Println("psstd terminal mirror")
+		fmt.Println("pulsed terminal mirror")
 		fmt.Println(styleDim.Render("waiting for cluster state..."))
 		return
 	}
 
-	fmt.Printf("psstd terminal mirror - %d node(s) - %s\n", len(nodes), time.Now().Format(time.RFC3339))
+	fmt.Printf("pulsed terminal mirror - %d node(s) - %s\n", len(nodes), time.Now().Format(time.RFC3339))
 	fmt.Println(summarizeCluster(nodes).TerminalHeader())
 	fmt.Println()
 	if listMode {

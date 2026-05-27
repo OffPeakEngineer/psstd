@@ -12,7 +12,7 @@ created: 2026-05-17
 
 ## Problem
 
-Operators sometimes need lightweight context: a node joined, left, went stale, or recovered. Logs contain this, but the dashboard could show a very short local event trail without turning psstd into an audit log.
+Operators sometimes need lightweight context: a node joined, left, went stale, or recovered. Logs contain this, but the dashboard could show a very short local event trail without turning pulsed into an audit log.
 
 ## Done when
 

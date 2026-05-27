@@ -1,23 +1,23 @@
 ---
-- name: Install psstd release binary as a systemd service
-  hosts: psstd
+- name: Install pulsed release binary as a systemd service
+  hosts: pulsed
   become: true
   vars:
-    psstd_version: latest
-    psstd_arch: "{{ 'arm64' if ansible_architecture in ['aarch64', 'arm64'] else 'amd64' }}"
-    psstd_release_base_url: "https://github.com/OffPeakEngineer/psstd/releases"
-    psstd_release_url: "{{ psstd_release_base_url }}/{{ 'latest/download' if psstd_version == 'latest' else 'download/' ~ psstd_version }}/psstd-linux-{{ psstd_arch }}"
-    psstd_http: ":8080"
-    psstd_advertise_http: "http://{{ ansible_default_ipv4.address }}:8080"
-    psstd_gossip: ":7946"
-    psstd_seeds: ""
-    psstd_db: /var/lib/psstd
+    pulsed_version: latest
+    pulsed_arch: "{{ 'arm64' if ansible_architecture in ['aarch64', 'arm64'] else 'amd64' }}"
+    pulsed_release_base_url: "https://github.com/OffPeakEngineer/pulsed/releases"
+    pulsed_release_url: "{{ pulsed_release_base_url }}/{{ 'latest/download' if pulsed_version == 'latest' else 'download/' ~ pulsed_version }}/pulsed-linux-{{ pulsed_arch }}"
+    pulsed_http: ":8080"
+    pulsed_advertise_http: "http://{{ ansible_default_ipv4.address }}:8080"
+    pulsed_gossip: ":7946"
+    pulsed_seeds: ""
+    pulsed_db: /var/lib/pulsed
   tasks:
-    - name: Create psstd user
+    - name: Create pulsed user
       ansible.builtin.user:
-        name: psstd
+        name: pulsed
         system: true
-        home: "{{ psstd_db }}"
+        home: "{{ pulsed_db }}"
         shell: /usr/sbin/nologin
 
     - name: Create config and data directories
@@ -28,50 +28,50 @@
         group: "{{ item.group }}"
         mode: "{{ item.mode }}"
       loop:
-        - { path: /etc/psstd, owner: root, group: root, mode: "0755" }
-        - { path: "{{ psstd_db }}", owner: psstd, group: psstd, mode: "0755" }
+        - { path: /etc/pulsed, owner: root, group: root, mode: "0755" }
+        - { path: "{{ pulsed_db }}", owner: pulsed, group: pulsed, mode: "0755" }
 
-    - name: Download psstd release binary
+    - name: Download pulsed release binary
       ansible.builtin.get_url:
-        url: "{{ psstd_release_url }}"
-        dest: /usr/local/bin/psstd
+        url: "{{ pulsed_release_url }}"
+        dest: /usr/local/bin/pulsed
         owner: root
         group: root
         mode: "0755"
 
-    - name: Install psstd environment
+    - name: Install pulsed environment
       ansible.builtin.copy:
-        dest: /etc/psstd/psstd.env
+        dest: /etc/pulsed/pulsed.env
         owner: root
         group: root
         mode: "0644"
         content: |
-          PSSTD_HTTP={{ psstd_http }}
-          PSSTD_ADVERTISE_HTTP={{ psstd_advertise_http }}
-          PSSTD_GOSSIP={{ psstd_gossip }}
-          PSSTD_SEEDS={{ psstd_seeds }}
-          PSSTD_DB={{ psstd_db }}
-          PSSTD_WEB=true
+          PULSED_HTTP={{ pulsed_http }}
+          PULSED_ADVERTISE_HTTP={{ pulsed_advertise_http }}
+          PULSED_GOSSIP={{ pulsed_gossip }}
+          PULSED_SEEDS={{ pulsed_seeds }}
+          PULSED_DB={{ pulsed_db }}
+          PULSED_WEB=true
 
     - name: Install systemd unit
       ansible.builtin.copy:
-        src: deploy/systemd/psstd.service
-        dest: /etc/systemd/system/psstd.service
+        src: deploy/systemd/pulsed.service
+        dest: /etc/systemd/system/pulsed.service
         owner: root
         group: root
         mode: "0644"
-      notify: Restart psstd
+      notify: Restart pulsed
 
-    - name: Enable psstd
+    - name: Enable pulsed
       ansible.builtin.systemd:
-        name: psstd
+        name: pulsed
         enabled: true
         state: started
         daemon_reload: true
 
   handlers:
-    - name: Restart psstd
+    - name: Restart pulsed
       ansible.builtin.systemd:
-        name: psstd
+        name: pulsed
         state: restarted
         daemon_reload: true

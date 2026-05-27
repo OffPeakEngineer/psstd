@@ -1,10 +1,10 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: psstd-headless
+  name: pulsed-headless
 spec:
   clusterIP: None
-  selector: {{ include "psstd.selectorLabels" . | nindent 4 }}
+  selector: {{ include "pulsed.selectorLabels" . | nindent 4 }}
   ports:
     - name: gossip-tcp
       port: {{ .Values.gossip.port }}

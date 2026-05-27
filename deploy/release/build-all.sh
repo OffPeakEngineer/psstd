@@ -2,13 +2,13 @@
 set -eu
 
 mkdir -p dist
-version="${PSSTD_VERSION:-$(git describe --tags --always --dirty 2>/dev/null || echo dev)}"
+version="${PULSED_VERSION:-$(git describe --tags --always --dirty 2>/dev/null || echo dev)}"
 
 build() {
   goos="$1"
   goarch="$2"
   ext="${3:-}"
-  out="dist/psstd-${goos}-${goarch}${ext}"
+  out="dist/pulsed-${goos}-${goarch}${ext}"
   echo "building ${out}"
   CGO_ENABLED=0 GOOS="$goos" GOARCH="$goarch" go build -trimpath -ldflags="-s -w -X main.appVersion=${version}" -o "$out" .
 }

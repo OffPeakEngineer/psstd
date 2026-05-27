@@ -12,7 +12,7 @@ created: 2026-05-17
 
 ## Problem 1
 
-psstd is easiest to like when it feels obvious what it is doing: which database it owns, which HTTP URL it advertises, which gossip address it listens on, and whether it joined peers. Today that information exists in logs, but it is not shaped as a concise operator-facing summary.
+pulsed is easiest to like when it feels obvious what it is doing: which database it owns, which HTTP URL it advertises, which gossip address it listens on, and whether it joined peers. Today that information exists in logs, but it is not shaped as a concise operator-facing summary.
 
 ## Done when
 

@@ -1,4 +1,4 @@
-# Template for exposing one bare-metal psstd node through Traefik running in Kubernetes.
+# Template for exposing one bare-metal pulsed node through Traefik running in Kubernetes.
 #
 # Apply one copy per bare-metal node, changing:
 # - metadata/name
@@ -6,16 +6,16 @@
 # - Host(...)
 #
 # On the matching bare-metal node, set:
-# PSSTD_HTTP=:8080
-# PSSTD_ADVERTISE_HTTP=https://psstd-node-a.example.com
-# PSSTD_GOSSIP=:7946
+# PULSED_HTTP=:8080
+# PULSED_ADVERTISE_HTTP=https://pulsed-node-a.example.com
+# PULSED_GOSSIP=:7946
 #
 # This preserves hot-potato refreshes and peer links because every node has a
 # stable browser-routable URL that Traefik routes to exactly one backend.
 apiVersion: v1
 kind: Service
 metadata:
-  name: psstd-node-a
+  name: pulsed-node-a
   namespace: default
 spec:
   ports:
@@ -26,7 +26,7 @@ spec:
 apiVersion: v1
 kind: Endpoints
 metadata:
-  name: psstd-node-a
+  name: pulsed-node-a
   namespace: default
 subsets:
   - addresses:
@@ -38,15 +38,15 @@ subsets:
 apiVersion: traefik.io/v1alpha1
 kind: IngressRoute
 metadata:
-  name: psstd-node-a
+  name: pulsed-node-a
   namespace: default
 spec:
   entryPoints:
     - websecure
   routes:
-    - match: Host(`psstd-node-a.example.com`)
+    - match: Host(`pulsed-node-a.example.com`)
       kind: Rule
       services:
-        - name: psstd-node-a
+        - name: pulsed-node-a
           port: 8080
   tls: {}

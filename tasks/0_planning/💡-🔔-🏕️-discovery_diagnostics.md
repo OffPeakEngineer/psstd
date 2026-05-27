@@ -12,7 +12,7 @@ created: 2026-05-17
 
 ## Problem 1
 
-When a node does not appear, the likely causes are mDNS, seeds, bind address, firewall, or version mismatch. psstd should help operators reason about that without becoming a network troubleshooting suite.
+When a node does not appear, the likely causes are mDNS, seeds, bind address, firewall, or version mismatch. pulsed should help operators reason about that without becoming a network troubleshooting suite.
 
 ## Done when
 

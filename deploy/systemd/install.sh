@@ -1,20 +1,20 @@
 #!/usr/bin/env sh
 set -eu
 
-install -m 0755 psstd /usr/local/bin/psstd
+install -m 0755 pulsed /usr/local/bin/pulsed
 
-if ! id psstd >/dev/null 2>&1; then
-  useradd --system --home /var/lib/psstd --shell /usr/sbin/nologin psstd
+if ! id pulsed >/dev/null 2>&1; then
+  useradd --system --home /var/lib/pulsed --shell /usr/sbin/nologin pulsed
 fi
 
-install -d -m 0755 /etc/psstd
-install -d -m 0755 -o psstd -g psstd /var/lib/psstd
+install -d -m 0755 /etc/pulsed
+install -d -m 0755 -o pulsed -g pulsed /var/lib/pulsed
 
-if [ ! -f /etc/psstd/psstd.env ]; then
-  install -m 0644 deploy/systemd/psstd.env /etc/psstd/psstd.env
+if [ ! -f /etc/pulsed/pulsed.env ]; then
+  install -m 0644 deploy/systemd/pulsed.env /etc/pulsed/pulsed.env
 fi
 
-install -m 0644 deploy/systemd/psstd.service /etc/systemd/system/psstd.service
+install -m 0644 deploy/systemd/pulsed.service /etc/systemd/system/pulsed.service
 systemctl daemon-reload
-systemctl enable --now psstd
-systemctl status psstd --no-pager
+systemctl enable --now pulsed
+systemctl status pulsed --no-pager
