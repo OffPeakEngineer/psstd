@@ -139,6 +139,20 @@ func nodeOnline(s NodeStats) bool {
 	return nodeHealth(s).State != healthOffline
 }
 
+func nodeVersionMismatch(s NodeStats) bool {
+	return s.Version != "" && s.Version != appVersion
+}
+
+func nodeVersionLabel(s NodeStats) string {
+	if s.Version == "" {
+		return ""
+	}
+	if nodeVersionMismatch(s) {
+		return fmt.Sprintf("version %s (local %s)", s.Version, appVersion)
+	}
+	return fmt.Sprintf("version %s", s.Version)
+}
+
 func pctBar(pct float64, width int, segments []barSegment) string {
 	filled := int(math.Round(pct / 100.0 * float64(width)))
 	if filled > width {
@@ -187,6 +201,15 @@ func renderANSI(s NodeStats) string {
 		sb.WriteString(fmt.Sprintf("  stale %.0fs ago\n", health.Age.Seconds()))
 	} else {
 		sb.WriteString(fmt.Sprintf("  updated %.0fs ago\n", health.Age.Seconds()))
+	}
+	if version := nodeVersionLabel(s); version != "" {
+		style := styleDim
+		if nodeVersionMismatch(s) {
+			style = styleYellow
+		}
+		sb.WriteString("  ")
+		sb.WriteString(style.Render(version))
+		sb.WriteByte('\n')
 	}
 	sb.WriteString(styleDim.Render(strings.Repeat("─", barWidth+14)))
 	sb.WriteByte('\n')

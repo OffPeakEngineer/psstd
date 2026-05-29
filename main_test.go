@@ -105,7 +105,11 @@ func TestStartupSummaryIncludesJoinOutcome(t *testing.T) {
 
 	joined := base
 	joined.JoinedPeers = 3
-	if got := startupSummary(joined); !strings.Contains(got, "join=joined=3") {
+	got := startupSummary(joined)
+	if !strings.Contains(got, "version=v1") {
+		t.Fatalf("startup summary missing version: %s", got)
+	}
+	if !strings.Contains(got, "join=joined=3") {
 		t.Fatalf("joined summary missing outcome: %s", got)
 	}
 

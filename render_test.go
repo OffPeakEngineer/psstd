@@ -156,6 +156,56 @@ func TestDashboardRendersClusterSummaryAndStateData(t *testing.T) {
 	}
 }
 
+func TestRenderANSIMarksLiveVersionMismatch(t *testing.T) {
+	oldVersion := appVersion
+	appVersion = "v2.0.0"
+	t.Cleanup(func() { appVersion = oldVersion })
+
+	out := renderANSI(NodeStats{
+		Name:       "old-live-node",
+		Version:    "v1.0.0",
+		UpdatedAt:  time.Now().UnixNano(),
+		TTLSeconds: 10,
+		CPU:        []float64{5},
+		MemTotal:   100,
+		MemUsed:    20,
+	})
+
+	for _, want := range []string{"old-live-node", "version v1.0.0 (local v2.0.0)"} {
+		if !strings.Contains(out, want) {
+			t.Fatalf("render missing %q:\n%s", want, out)
+		}
+	}
+}
+
+func TestDashboardRendersLiveVersionMismatch(t *testing.T) {
+	oldVersion := appVersion
+	appVersion = "v2.0.0"
+	t.Cleanup(func() { appVersion = oldVersion })
+
+	db := openTestDB(t)
+	if err := dbSet(db, NodeStats{
+		Name:       "old-live-node",
+		Version:    "v1.0.0",
+		UpdatedAt:  time.Now().UnixNano(),
+		TTLSeconds: 10,
+		CPU:        []float64{5},
+		MemTotal:   100,
+		MemUsed:    20,
+	}); err != nil {
+		t.Fatalf("set old-live-node: %v", err)
+	}
+
+	req := httptest.NewRequest("GET", "/?theme=dark&palette=monochrome", nil)
+	rr := httptest.NewRecorder()
+	makeHandler(db, "old-live-node").ServeHTTP(rr, req)
+
+	body := rr.Body.String()
+	if !strings.Contains(body, "version v1.0.0 (local v2.0.0)") {
+		t.Fatalf("dashboard missing version mismatch:\n%s", body)
+	}
+}
+
 func TestSetNodeStatsTTLUsesConfiguredTTL(t *testing.T) {
 	stats := NodeStats{Name: "node-a"}
 	setNodeStatsTTL(&stats, 42*time.Second)

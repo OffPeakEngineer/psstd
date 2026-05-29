@@ -69,6 +69,17 @@ Each node publishes its own heartbeat TTL with `PULSED_NODE_TTL`. Shorter values
 make stale/offline indication react faster; longer values are better for slow or
 lossy networks. The default is `15s`, and values must be at least `2s`.
 
+## Rolling Upgrades
+
+Each heartbeat includes the binary version. During a rolling upgrade, live nodes
+from another version can remain visible so operators can watch the cluster
+converge. The dashboard and terminal view label those live mismatches as
+`version <peer> (local <this-node>)` without treating them as failures.
+
+Offline records from older versions are removed on startup or when a mismatched
+peer leaves. This keeps stale data from previous releases from lingering after
+the upgraded node can no longer confirm it.
+
 ## Discovery
 
 | Environment | How nodes find each other |
