@@ -4,12 +4,15 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"os/signal"
 	"sort"
 	"strconv"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/charmbracelet/lipgloss"
+	"github.com/charmbracelet/x/term"
 	"github.com/cockroachdb/pebble/v2"
 )
 
@@ -25,16 +28,100 @@ var terminalCellStyle = lipgloss.NewStyle().
 	Width(terminalCellWidth)
 
 func terminalRenderLoop(db *pebble.DB, listMode bool) {
+	if terminalInteractive(os.Stdin, os.Stdout) {
+		err := terminalInteractiveRenderLoop(db, listMode, os.Stdin)
+		if err == nil {
+			return
+		}
+		log.Printf("terminal interactive unavailable: %v", err)
+	}
+	terminalPlainRenderLoop(db, listMode)
+}
+
+func terminalPlainRenderLoop(db *pebble.DB, listMode bool) {
 	ticker := time.NewTicker(2 * time.Second)
 	defer ticker.Stop()
 
 	for {
-		renderTerminalSnapshot(db, listMode)
+		renderTerminalSnapshot(db, listMode, false)
 		<-ticker.C
 	}
 }
 
-func renderTerminalSnapshot(db *pebble.DB, listMode bool) {
+func terminalInteractive(stdin, stdout *os.File) bool {
+	return term.IsTerminal(stdin.Fd()) && term.IsTerminal(stdout.Fd())
+}
+
+func terminalInteractiveRenderLoop(db *pebble.DB, listMode bool, stdin *os.File) error {
+	oldState, err := term.MakeRaw(stdin.Fd())
+	if err != nil {
+		return err
+	}
+	defer term.Restore(stdin.Fd(), oldState)
+
+	signals := make(chan os.Signal, 1)
+	signal.Notify(signals, os.Interrupt, syscall.SIGTERM)
+	defer signal.Stop(signals)
+
+	keys := make(chan byte, 4)
+	go readTerminalKeys(stdin, keys)
+
+	ticker := time.NewTicker(2 * time.Second)
+	defer ticker.Stop()
+
+	renderTerminalSnapshot(db, listMode, true)
+	for {
+		select {
+		case <-signals:
+			fmt.Print("\r\n")
+			return nil
+		case key := <-keys:
+			switch terminalKeyAction(key) {
+			case terminalActionQuit:
+				fmt.Print("\r\n")
+				return nil
+			case terminalActionRefresh:
+				renderTerminalSnapshot(db, listMode, true)
+			}
+		case <-ticker.C:
+			renderTerminalSnapshot(db, listMode, true)
+		}
+	}
+}
+
+func readTerminalKeys(stdin *os.File, keys chan<- byte) {
+	var buf [1]byte
+	for {
+		n, err := stdin.Read(buf[:])
+		if err != nil {
+			return
+		}
+		if n == 1 {
+			keys <- buf[0]
+		}
+	}
+}
+
+type terminalAction int
+
+const (
+	terminalActionNone terminalAction = iota
+	terminalActionQuit
+	terminalActionRefresh
+)
+
+func terminalKeyAction(key byte) terminalAction {
+	switch key {
+	case 'q', 'Q', 3:
+		return terminalActionQuit
+	case 'r', 'R':
+		return terminalActionRefresh
+	default:
+		return terminalActionNone
+	}
+}
+
+func renderTerminalSnapshot(db *pebble.DB, listMode bool, interactive bool) {
 	nodes, err := dbScanAll(db)
 	if err != nil {
 		log.Printf("terminal render: %v", err)
@@ -43,12 +130,12 @@ func renderTerminalSnapshot(db *pebble.DB, listMode bool) {
 
 	fmt.Print("\033[H\033[2J")
 	if len(nodes) == 0 {
-		fmt.Println("pulsed terminal mirror")
+		fmt.Println(terminalHeader(0, time.Now(), interactive))
 		fmt.Println(styleDim.Render("waiting for cluster state..."))
 		return
 	}
 
-	fmt.Printf("pulsed terminal mirror - %d node(s) - %s\n", len(nodes), time.Now().Format(time.RFC3339))
+	fmt.Println(terminalHeader(len(nodes), time.Now(), interactive))
 	fmt.Println(summarizeCluster(nodes).TerminalHeader())
 	fmt.Println()
 	if listMode {
@@ -56,6 +143,15 @@ func renderTerminalSnapshot(db *pebble.DB, listMode bool) {
 		return
 	}
 	fmt.Print(renderTerminalGrid(nodes, terminalWidth()))
+}
+
+func terminalHeader(nodeCount int, now time.Time, interactive bool) string {
+	controls := "refreshes every 2s"
+	if interactive {
+		controls = "q quit - r refresh - Ctrl-C quit"
+	}
+	return fmt.Sprintf("pulsed terminal mirror (viewer-only) - %d node(s) - %s - %s",
+		nodeCount, now.Format(time.RFC3339), controls)
 }
 
 func renderTerminalNodes(nodes []NodeStats) string {

@@ -53,3 +53,40 @@ func TestTerminalColumns(t *testing.T) {
 		t.Fatalf("wide columns = %d, want 2", got)
 	}
 }
+
+func TestTerminalHeaderExplainsViewerModeAndControls(t *testing.T) {
+	now := time.Date(2026, 5, 29, 12, 34, 56, 0, time.UTC)
+
+	plain := terminalHeader(2, now, false)
+	for _, want := range []string{"viewer-only", "2 node(s)", "2026-05-29T12:34:56Z", "refreshes every 2s"} {
+		if !strings.Contains(plain, want) {
+			t.Fatalf("plain header missing %q: %s", want, plain)
+		}
+	}
+
+	interactive := terminalHeader(2, now, true)
+	for _, want := range []string{"viewer-only", "q quit", "r refresh", "Ctrl-C quit"} {
+		if !strings.Contains(interactive, want) {
+			t.Fatalf("interactive header missing %q: %s", want, interactive)
+		}
+	}
+}
+
+func TestTerminalKeyAction(t *testing.T) {
+	cases := []struct {
+		key  byte
+		want terminalAction
+	}{
+		{key: 'q', want: terminalActionQuit},
+		{key: 'Q', want: terminalActionQuit},
+		{key: 3, want: terminalActionQuit},
+		{key: 'r', want: terminalActionRefresh},
+		{key: 'R', want: terminalActionRefresh},
+		{key: 'x', want: terminalActionNone},
+	}
+	for _, tc := range cases {
+		if got := terminalKeyAction(tc.key); got != tc.want {
+			t.Fatalf("key %q action = %d, want %d", tc.key, got, tc.want)
+		}
+	}
+}

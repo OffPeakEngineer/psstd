@@ -1,10 +1,13 @@
-# Pulse
+# Pulsed
 
 [![CI](https://github.com/OffPeakEngineer/pulsed/actions/workflows/ci.yml/badge.svg)](https://github.com/OffPeakEngineer/pulsed/actions/workflows/ci.yml) [![Release](https://github.com/OffPeakEngineer/pulsed/actions/workflows/release.yml/badge.svg)](https://github.com/OffPeakEngineer/pulsed/actions/workflows/release.yml)
 
-**Pulse is a resilient cluster htop.** Run it on a few machines, open any node in a browser, and watch the whole cluster from a server-rendered dashboard. If the node serving your browser gets busy, it can send the next refresh to a quieter peer.
+**Pulsed is a resilient cluster htop daemon.** Run it on a few machines, open any node in a browser, and watch the whole cluster from a server-rendered dashboard. If the node serving your browser gets busy, it can send the next refresh to a quieter peer.
 
 The result is intentionally simple: every node can serve the UI, every node shares fresh load metrics with its peers, and the browser can be hot-potatoed around the cluster without a central coordinator.
+
+Deeper docs live in `docs/`; this README stays focused on quick start and common
+deployment paths.
 
 ## Features
 
@@ -60,7 +63,7 @@ export PULSED_NODE_TTL="15s"                       # how long this node's heartb
 ./pulsed
 ```
 
-By default, Pulse uses the OS hostname as the node identity. Set
+By default, Pulsed uses the OS hostname as the node identity. Set
 `PULSED_NODE_NAME` for cloned hosts, containers, or multiple test instances that
 would otherwise publish the same hostname. The override must be non-empty and
 must not contain whitespace.
@@ -91,7 +94,7 @@ the upgraded node can no longer confirm it.
 
 ## Service Templates
 
-Templates live in `deploy/` for common ways to keep Pulse running:
+Templates live in `deploy/` for common ways to keep Pulsed running:
 
 | Target | Template |
 |---|---|
@@ -99,6 +102,7 @@ Templates live in `deploy/` for common ways to keep Pulse running:
 | macOS launchd | `deploy/launchd/com.offpeakengineer.pulsed.plist` |
 | Windows service | `deploy/windows/install-service.ps1` using NSSM |
 | Kubernetes | `deploy/kubernetes/pulsed.yaml` |
+| Helm | `helm/pulsed` |
 | Ansible local binary | `deploy/ansible/install-pulsed.yml` |
 | Ansible release binary | `deploy/ansible/install-release-pulsed.yml` |
 | Traefik to bare metal | `deploy/traefik/bare-metal-node.yaml` |

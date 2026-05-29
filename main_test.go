@@ -2,6 +2,8 @@ package main
 
 import (
 	"errors"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"strings"
 	"testing"
@@ -21,6 +23,20 @@ func withoutNodeNameEnv(t *testing.T) {
 			_ = os.Unsetenv(envNodeName)
 		}
 	})
+}
+
+func TestHealthHandler(t *testing.T) {
+	req := httptest.NewRequest(http.MethodGet, "/healthz", nil)
+	rr := httptest.NewRecorder()
+
+	healthHandler(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusOK)
+	}
+	if got := rr.Body.String(); got != "ok\n" {
+		t.Fatalf("body = %q, want ok newline", got)
+	}
 }
 
 func TestNodeNameFromEnvUsesHostnameByDefault(t *testing.T) {

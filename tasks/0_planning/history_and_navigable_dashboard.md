@@ -30,6 +30,37 @@ Large-cluster dashboard pain belongs here too: high core counts, dense metric
 rows, refresh-driven scroll jumps, and lack of node selection all make current
 and historical data harder to inspect.
 
+History should be indexed around stable dimensions rather than ad hoc field
+names. The mental model is:
+
+~~~text
+timeslice/observation [
+  'node_id': [
+    child_node_path [
+      structure [
+        parameters [
+          metrics []
+        ]
+      ]
+    ]
+  ], ...
+]
+~~~
+
+In query terms: when, who, where, what, and how/currentness. That lets pulsed
+enumerate all available things first, then fetch or subscribe to the slice a
+caller actually wants.
+
+"Node" is recursive but hierarchical here. A physical host can have child nodes
+for a bus, device, container, service, or virtual component. Those children can
+have their own structures and metrics, but they remain under a parent path so
+history and trust indexes stay tractable.
+
+Node scope matters when reading history. A pod node, bare-metal host node,
+cluster orchestrator node, availability-zone node, and region node can all
+observe the same system from different bodies. History should preserve that
+scope so a reader can distinguish raw internal detail from a boundary summary.
+
 ## Done when
 
 ### Write
@@ -37,6 +68,9 @@ and historical data harder to inspect.
 - [ ] Optional history streaming writes selected observations to a flat file
   format such as line-delimited JSON or CSV
 - [ ] Capture policy can filter by tag, role, trust ring, event type, or TTL
+- [ ] History records preserve index dimensions: timeslice, node/source,
+  parent/child node path, node scope/body, structure, parameter, metric name,
+  and value
 - [ ] Events include timestamp, source node ID, tags, trust metadata, and
   signature status when available
 - [ ] Events preserve whether an observation was known locally, sensed locally,
@@ -45,8 +79,14 @@ and historical data harder to inspect.
 ### Recall
 - [ ] Recall API can return observed state at a point in time
 - [ ] Recall API can filter by tag, role, trust ring, source, or event type
+- [ ] Recall API can filter by node scope/body, such as pod, host,
+  orchestrator, zone, or region
 - [ ] Recall API can distinguish direct local observations from heard or
   re-shared observations
+- [ ] Queryable resources can advertise whether they are current, historical,
+  stale, or bounded to a time window
+- [ ] Enumeration API can list available timeslices, node paths, structures,
+  parameters, metrics, tags, and queryable resources before payload retrieval
 - [ ] Dashboard renders compact recent trends for key metrics where history is
   available
 - [ ] Timeline UI can show tagged events and scrub or step through state
@@ -59,6 +99,8 @@ and historical data harder to inspect.
   operator policy
 - [ ] Re-sharing honors rebuff/backoff signals from neighbors that do not care
   to receive a category of data
+- [ ] Re-sharing can answer explicit tag/resource requests when local policy
+  allows it
 - [ ] Re-shared data remains distinguishable from direct local observations
 - [ ] Defaults preserve today's local-only lightweight behavior
 

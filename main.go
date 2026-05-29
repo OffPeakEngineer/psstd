@@ -136,6 +136,7 @@ func main() {
 	// ── HTTP ─────────────────────────────────────────────────────────────────
 	if webEnabled {
 		mux := http.NewServeMux()
+		mux.HandleFunc("/healthz", healthHandler)
 		mux.HandleFunc("/", makeHandler(db, nodeName))
 		if err := http.ListenAndServe(httpAddr, mux); err != nil {
 			log.Fatalf("http: %v", err)
@@ -143,6 +144,12 @@ func main() {
 	} else {
 		select {} // block forever
 	}
+}
+
+func healthHandler(w http.ResponseWriter, _ *http.Request) {
+	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+	w.WriteHeader(http.StatusOK)
+	_, _ = w.Write([]byte("ok\n"))
 }
 
 func parseCLI(args []string) cliOptions {

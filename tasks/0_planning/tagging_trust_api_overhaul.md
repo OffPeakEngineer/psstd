@@ -27,6 +27,12 @@ heard through the mesh.
 
 - **Stable identity**: a UUID-backed node ID is distinct from the human-facing
   `server_name`
+- **Hierarchical nodes**: a node may contain child nodes, but containment stays
+  hierarchical so a host can expose devices, buses, containers, services, or
+  virtual subcomponents without becoming an arbitrary graph
+- **Scope and body nodes**: internal child nodes can form a local loopback mesh,
+  while external/body nodes represent boundaries such as pod, host, orchestrator,
+  availability zone, or region
 - **Reserved tags**: well-known tags cover role, environment, trust ring,
   source, observation category, and operator-defined groupings
 - **Observation categories**: payloads can distinguish what a node knows, feels,
@@ -38,6 +44,12 @@ heard through the mesh.
   truth
 - **Care/share policy**: nodes can describe what they are willing to send,
   forward, summarize, suppress, or rebuff
+- **Tag requests**: nodes can ask peers for tagged resources or observations,
+  such as a named theme, and peers can oblige, decline, or redirect based on
+  local policy
+- **Enumeration model**: resources and observations are listed by stable index
+  dimensions before they are fetched, so clients can ask what exists without
+  guessing payload names
 - **API shape**: node and history APIs expose tags, identity, trust, and
   signature status consistently so downstream UI and history logic do not infer
   them from display strings
@@ -46,6 +58,10 @@ heard through the mesh.
 
 - Optional stable node identity is available as `PULSED_NODE_ID`/UUID while
   `server_name` remains the human-facing display name
+- Node identity supports a parent/child path so "node has nodes" can represent
+  nested structures while preserving a single rooted hierarchy
+- Node metadata can distinguish internal loopback nodes from external/body
+  nodes that represent a broader operational boundary
 - Optional `PULSED_ROLE` maps into a reserved `role` tag rather than a one-off
   display field
 - Node tags travel with gossip broadcasts as part of the node state/API payload
@@ -59,6 +75,11 @@ heard through the mesh.
   to infer whether data was known, sensed, seen, heard, or re-shared
 - Share-policy and rebuff/backoff fields are designed so peers can avoid
   repeatedly sending information a neighbor does not care to receive
+- Tag request and response messages are designed for queryable resources:
+  request tag, requested kind, optional version/time bounds, response status,
+  payload reference, and rebuff/backoff hint
+- Enumeration APIs define the stable dimensions used for indexing: when, who,
+  where, what, and how/currentness
 - Dashboard and terminal views can render compact role/trust/tag hints without
   owning trust decisions
 - Empty tags and unsigned payloads preserve current lightweight behavior

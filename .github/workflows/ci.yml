@@ -19,17 +19,18 @@ jobs:
       - name: Set up Node
         uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: '22.14.0'
+          cache: npm
 
       - name: Install commit tooling
-        run: npm install
+        run: npm ci
 
       - name: Lint commits
         shell: bash
         run: |
           git fetch --no-tags --prune --unshallow || true
           base=$(git merge-base origin/main HEAD || echo HEAD~20)
-          npx commitlint --from="$base" --to=HEAD
+          npx --no-install commitlint --from="$base" --to=HEAD
 
   test:
     name: test (${{ matrix.name }})
