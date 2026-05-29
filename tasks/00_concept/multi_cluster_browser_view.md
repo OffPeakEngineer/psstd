@@ -1,7 +1,6 @@
 ---
 id: task-20260517-multicluster
 title: Explore multi-cluster browser view
-status: 0_planning
 type: feature
 priority: low
 effort: huge

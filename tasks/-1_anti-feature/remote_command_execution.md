@@ -1,7 +1,6 @@
 ---
 id: task-20260517-node-commands
 title: Do not add remote command execution
-status: -1_anti-feature
 type: security
 priority: normal
 effort: cake

@@ -1,7 +1,6 @@
 ---
 id: task-20260517-version-mismatch-explanation
 title: Explain version mismatch behavior
-status: 0_planning
 type: maintenance
 priority: normal
 effort: walk

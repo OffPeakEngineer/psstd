@@ -1,7 +1,6 @@
 ---
 id: task-20260517-duplicate-instance-tests
 title: Test duplicate-instance terminal fallback
-status: 0_planning
 type: maintenance
 priority: normal
 effort: night

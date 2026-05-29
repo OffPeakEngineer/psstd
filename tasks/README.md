@@ -1,7 +1,9 @@
 # Tasks
 
 This folder is a Patchboard task board. Tasks are Markdown files, and the
-folder containing a task is its workflow state.
+folder containing a task is its workflow state. Keep this board lightweight:
+the Patchboard tooling owns strict validation, metadata repair, and deductions
+from git history.
 
 ## States
 - -1_anti-feature
@@ -16,29 +18,24 @@ trail.
 `-1_anti-feature` is for explicit non-goals: ideas that may sound useful but
 would make pulsed heavier, riskier, or less focused. Keep these as reference
 points so future planning can explain why the project is not taking that path.
-Anti-feature files still use the same filename tags and frontmatter shape.
 
 ## Task Shape
-Each task gets assigned these three tags to help with high-level sorting and easy prioritization:
-- Type: 🐞(bug)💡(feature)🔒(security)🛠️(maintenance)
-- Priority:🔥(fire)⚠️(urgent)🔔(normal)⏳(idle)🧊(low)
-- Effort: ⛰️(huge)🛩️(a trip)🏕️(a night)🍰(a piece of cake)🛝(a walk in the park)
+Use plain, tab-completion-friendly filenames:
 
+~~~text
+title_in_snake_case.md
+~~~
 
-### File Name Convention
-[type]-[priority]-[effort]-[title_in_snake_case].md
-Example: "💡-🧊-🛩️-historical_spark_lines.md"
-
-Use exactly one emoji from each category, in this order. Do not omit the type
-tag, and do not swap priority and effort.
-
+Store sorting and planning metadata in frontmatter:
+- `type`: bug, feature, security, maintenance
+- `priority`: fire, urgent, normal, idle, low
+- `effort`: huge, trip, night, cake, walk
 
 ### File Body
 ~~~markdown
 ---
 id: task-YYYYMMDD-short-name
 title: Short, concrete task title
-status: 0_planning
 type: feature
 priority: normal
 effort: walk
@@ -57,8 +54,8 @@ What needs to change, and why?
 - Relevant tests or checks pass
 ~~~
 
-The folder is authoritative for status. If frontmatter includes `status`,
-it should match the parent folder exactly, such as `0_planning`.
+The folder is authoritative for status. Move a file between state folders
+instead of editing status metadata.
 
 ## Code Annotations
 

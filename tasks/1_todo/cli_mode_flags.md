@@ -1,7 +1,6 @@
 ---
 id: task-20260518-cli-mode-flags
 title: Design explicit CLI mode flags
-status: 0_planning
 type: maintenance
 priority: normal
 effort: night

@@ -1,7 +1,6 @@
 ---
 id: task-20260517-metrics-export
 title: Do not add a Prometheus metrics API by default
-status: -1_anti-feature
 type: maintenance
 priority: normal
 effort: cake

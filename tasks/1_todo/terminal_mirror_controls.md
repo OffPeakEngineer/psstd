@@ -1,7 +1,6 @@
 ---
 id: task-20260517-terminal-mirror-controls
 title: Polish terminal mirror controls
-status: 0_planning
 type: feature
 priority: normal
 effort: walk

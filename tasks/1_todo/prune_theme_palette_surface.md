@@ -1,7 +1,6 @@
 ---
 id: task-20260517-prune-palettes
 title: Reconsider the theme and palette surface
-status: 0_planning
 type: maintenance
 priority: low
 effort: cake
